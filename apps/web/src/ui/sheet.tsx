@@ -32,7 +32,10 @@ export function Sheet({
       const dialog = dialogRef.current;
       if (!isOpen && dialog?.open) {
         dialog.close();
-        returnFocusRef.current?.focus();
+        const returnTarget = returnFocusRef.current;
+        if (returnTarget && returnTarget.getClientRects().length > 0) {
+          returnTarget.focus();
+        }
         onClosed?.();
       }
     },
