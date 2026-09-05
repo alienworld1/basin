@@ -1,0 +1,38 @@
+import { bigint, numeric, pgSchema, timestamp } from "drizzle-orm/pg-core";
+import {
+  workspaceTypes,
+  memberRoles,
+  identityStatuses,
+  payeeStatuses,
+  obligationStatuses,
+  paymentStatuses,
+  eventTypes,
+  endReasons,
+  executionPaths,
+  idempotencyStatuses,
+} from "@basin/domain";
+export const basin = pgSchema("basin");
+export const id = () =>
+  bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity();
+export const reference = () => bigint({ mode: "bigint" });
+export const uint = () => numeric({ precision: 78, scale: 0 });
+export const time = () => timestamp({ withTimezone: true, mode: "date" });
+export const workspaceType = basin.enum("workspace_type", workspaceTypes);
+export const memberRole = basin.enum("member_role", memberRoles);
+export const identityStatus = basin.enum("identity_status", identityStatuses);
+export const payeeStatus = basin.enum("payee_status", payeeStatuses);
+export const obligationStatus = basin.enum(
+  "obligation_status",
+  obligationStatuses,
+);
+export const paymentStatus = basin.enum("payment_status", paymentStatuses);
+export const eventType = basin.enum("payment_event_type", eventTypes);
+export const endReason = basin.enum("generation_end_reason", endReasons);
+export const executionPath = basin.enum("execution_path", executionPaths);
+export const idempotencyStatus = basin.enum(
+  "idempotency_status",
+  idempotencyStatuses,
+);
+export const idempotencyScope = basin.enum("idempotency_scope", [
+  "CREATE_PAYMENT",
+]);
