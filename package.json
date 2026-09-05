@@ -10,7 +10,16 @@
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
-    "lint": "pnpm --filter web lint",
-    "typecheck": "pnpm --filter web typecheck"
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm --filter @basin/db generate",
+    "db:migrate": "pnpm --filter @basin/db migrate",
+    "db:status": "pnpm --filter @basin/db status",
+    "test:db": "pnpm --filter @basin/db test",
+    "db:check": "pnpm --filter @basin/db check",
+    "start": "pnpm db:check && pnpm --filter web start"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
   }
 }
