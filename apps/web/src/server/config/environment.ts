@@ -1,6 +1,8 @@
 import "server-only";
 
 import { z } from "zod";
+import { databaseUrl } from "@basin/domain";
+import type { DatabaseHealth } from "@basin/db";
 
 import { networkConfig } from "./network";
 
@@ -16,6 +18,11 @@ const httpUrl = (message: string) =>
 
 const environmentSchema = z
   .object({
+    DATABASE_URL: databaseUrl,
+    DATABASE_MIGRATION_URL: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      databaseUrl.optional(),
+    ),
     APP_ENV: z
       .enum(["development", "preview", "production"], {
         error: "Set a supported application environment.",
@@ -45,6 +52,8 @@ const environmentSchema = z
   });
 
 const rawEnvironment = {
+  DATABASE_URL: process.env.DATABASE_URL,
+  DATABASE_MIGRATION_URL: process.env.DATABASE_MIGRATION_URL,
   APP_ENV: process.env.APP_ENV,
   APP_URL: process.env.APP_URL,
   SEPOLIA_RPC_URL: process.env.SEPOLIA_RPC_URL,
@@ -59,6 +68,7 @@ export type EnvironmentHealth = {
     chainId: typeof networkConfig.chainId;
   };
   checks: {
+    database: DatabaseHealth;
     configuration: "ok" | "invalid";
     rpc: "configured" | "not_required";
   };
@@ -69,7 +79,9 @@ export function getServerEnvironment() {
   const result = environmentSchema.safeParse(rawEnvironment);
 
   if (!result.success) {
-    const messages = [...new Set(result.error.issues.map((issue) => issue.message))];
+    const messages = [
+      ...new Set(result.error.issues.map((issue) => issue.message)),
+    ];
     throw new Error(messages.join(" "));
   }
 
@@ -94,6 +106,7 @@ export function getEnvironmentHealth(): EnvironmentHealth {
         chainId: networkConfig.chainId,
       },
       checks: {
+        database: "unavailable",
         configuration: "invalid",
         rpc: "not_required",
       },
@@ -109,6 +122,7 @@ export function getEnvironmentHealth(): EnvironmentHealth {
       chainId: networkConfig.chainId,
     },
     checks: {
+      database: "unavailable",
       configuration: "ok",
       rpc: result.data.SEPOLIA_RPC_URL ? "configured" : "not_required",
     },

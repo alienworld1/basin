@@ -12,6 +12,8 @@ Basin is a payment relationship layer for repeated business payments. The payer 
 ```bash
 cp .env.example apps/web/.env.local
 pnpm install
+# Set DATABASE_URL and DATABASE_MIGRATION_URL in your environment and apps/web/.env.local.
+pnpm db:migrate
 pnpm dev
 ```
 
@@ -31,3 +33,5 @@ pnpm build
 The repository is one pnpm workspace. `apps/web` is the only runtime application and serves both the interface and Route Handlers; there is no separate backend process.
 
 To verify configuration failures locally, temporarily set `APP_URL` or `SEPOLIA_RPC_URL` to a malformed value and run `pnpm build`, then restore the value. To exercise an error boundary, temporarily throw from the relevant page during local verification and revert that change before committing.
+
+Database setup, least-privilege grants, migration review, isolated integration tests, and manual QA are documented in [the persistence guide](packages/db/README.md). Run `pnpm db:check` before deployment; `pnpm start` enforces this check before starting the production server.
