@@ -16,6 +16,7 @@
     "db:migrate": "pnpm --filter @basin/db migrate",
     "db:status": "pnpm --filter @basin/db status",
     "test:db": "pnpm --filter @basin/db test",
+    "test:auth": "pnpm --filter web test",
     "db:check": "pnpm --filter @basin/db check",
     "start": "pnpm db:check && pnpm --filter web start"
   },

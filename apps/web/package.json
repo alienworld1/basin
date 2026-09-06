@@ -7,17 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "NODE_OPTIONS=--conditions=react-server tsx --test test/*.test.ts"
   },
   "dependencies": {
+    "@basin/db": "workspace:*",
+    "@basin/domain": "workspace:*",
+    "@privy-io/node": "^0.34.0",
+    "@privy-io/react-auth": "^3.40.0",
     "@react-spring/web": "^10.0.3",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
-    "zod": "^4.1.5",
-    "@basin/db": "workspace:*",
-    "@basin/domain": "workspace:*"
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -27,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
+    "tsx": "^4.20.0",
     "typescript": "^5"
   }
 }
