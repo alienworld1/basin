@@ -11,12 +11,14 @@ type MobileNavigationProps = {
   navigation: NavigationItem[];
   workspaceSwitcher: React.ReactNode;
   inspectorContent: React.ReactNode;
+  accountControl: React.ReactNode;
 };
 
 export function MobileNavigation({
   navigation,
   workspaceSwitcher,
   inspectorContent,
+  accountControl,
 }: MobileNavigationProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -91,6 +93,7 @@ export function MobileNavigation({
         >
           Technical details
         </button>
+        <div className="mt-10">{accountControl}</div>
       </Sheet>
       <Sheet
         isOpen={isInspectorOpen}

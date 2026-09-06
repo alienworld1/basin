@@ -1,6 +1,5 @@
 import { getEnvironmentHealth } from "@/src/server/config/environment";
-import { AppShell } from "@/src/ui/app-shell";
-import { EmptyState } from "@/src/ui/empty-state";
+import { WorkspaceApp } from "@/src/ui/workspaces/workspace-app";
 import type { InspectorDetails, NavigationItem } from "@/src/ui/shell-types";
 
 const navigation = [
@@ -11,7 +10,17 @@ const navigation = [
   },
 ] satisfies NavigationItem[];
 
-export default function WorkspacePage() {
+export default async function WorkspacePage({
+  searchParams,
+}: PageProps<"/app">) {
+  const query = await searchParams;
+  const workspaceQuery = query.workspace;
+  const requestedWorkspaceId =
+    typeof workspaceQuery === "string"
+      ? workspaceQuery
+      : Array.isArray(workspaceQuery)
+        ? "invalid"
+        : undefined;
   const health = getEnvironmentHealth();
   const inspectorDetails: InspectorDetails = {
     environment: health.environment,
@@ -22,16 +31,10 @@ export default function WorkspacePage() {
   };
 
   return (
-    <AppShell
-      workspace={null}
-      availableWorkspaces={[]}
+    <WorkspaceApp
+      requestedWorkspaceId={requestedWorkspaceId}
       navigation={navigation}
       inspectorDetails={inspectorDetails}
-    >
-      <EmptyState
-        title="No workspace selected"
-        description="Sign in to create or join a Personal or Organization workspace."
-      />
-    </AppShell>
+    />
   );
 }

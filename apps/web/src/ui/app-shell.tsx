@@ -7,6 +7,7 @@ import type {
   InspectorDetails,
   NavigationItem,
   WorkspaceShellContext,
+  WorkspaceSummary,
 } from "./shell-types";
 import { TechnicalDetails } from "./technical-details";
 import { WorkspaceSwitcher } from "./workspace-switcher";
@@ -14,6 +15,10 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
 type AppShellProps = WorkspaceShellContext & {
   navigation: NavigationItem[];
   inspectorDetails: InspectorDetails;
+  accountControl: React.ReactNode;
+  onSelectWorkspace: (workspace: WorkspaceSummary) => void;
+  onCreateWorkspace: () => void;
+  switchingWorkspace?: boolean;
   children: React.ReactNode;
 };
 
@@ -22,6 +27,10 @@ export function AppShell({
   availableWorkspaces,
   navigation,
   inspectorDetails,
+  accountControl,
+  onSelectWorkspace,
+  onCreateWorkspace,
+  switchingWorkspace,
   children,
 }: AppShellProps) {
   return (
@@ -38,6 +47,9 @@ export function AppShell({
           <WorkspaceSwitcher
             workspace={workspace}
             availableWorkspaces={availableWorkspaces}
+            onSelect={onSelectWorkspace}
+            onCreate={onCreateWorkspace}
+            disabled={switchingWorkspace}
           />
         </div>
 
@@ -46,10 +58,14 @@ export function AppShell({
         <DesktopTechnicalInspector>
           <TechnicalDetails details={inspectorDetails} />
         </DesktopTechnicalInspector>
+        <div className="mt-6">{accountControl}</div>
       </aside>
 
       <header className="flex h-16 items-center justify-between border-b border-line bg-surface px-5 md:hidden">
-        <Link href="/" className="focus-ring text-lg font-semibold tracking-tight">
+        <Link
+          href="/"
+          className="focus-ring text-lg font-semibold tracking-tight"
+        >
           Basin
         </Link>
         <MobileNavigation
@@ -58,9 +74,13 @@ export function AppShell({
             <WorkspaceSwitcher
               workspace={workspace}
               availableWorkspaces={availableWorkspaces}
+              onSelect={onSelectWorkspace}
+              onCreate={onCreateWorkspace}
+              disabled={switchingWorkspace}
             />
           }
           inspectorContent={<TechnicalDetails details={inspectorDetails} />}
+          accountControl={accountControl}
         />
       </header>
 
