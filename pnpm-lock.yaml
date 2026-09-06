@@ -20,6 +20,9 @@ importers:
       '@basin/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@basin/ens':
+        specifier: workspace:*
+        version: link:../../packages/ens
       '@privy-io/node':
         specifier: ^0.34.0
         version: 0.34.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(viem@2.56.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.5.4))
@@ -125,6 +128,25 @@ importers:
         specifier: ^4.1.5
         version: 4.5.4
     devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/ens:
+    dependencies:
+      '@adraffy/ens-normalize':
+        specifier: ^1.11.0
+        version: 1.11.1
+      viem:
+        specifier: ^2.56.0
+        version: 2.56.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.5.4)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.43
+        version: 20.19.43
+      tsx:
+        specifier: ^4.20.0
+        version: 4.23.13
       typescript:
         specifier: ^5
         version: 5.9.3

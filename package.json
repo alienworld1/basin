@@ -17,6 +17,7 @@
     "db:status": "pnpm --filter @basin/db status",
     "test:db": "pnpm --filter @basin/db test",
     "test:auth": "pnpm --filter web test",
+    "test:ens": "pnpm --filter @basin/ens test",
     "db:check": "pnpm --filter @basin/db check",
     "start": "pnpm db:check && pnpm --filter web start"
   },

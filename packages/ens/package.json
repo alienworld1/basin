@@ -1,0 +1,26 @@
+{
+  "name": "@basin/ens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./names": "./src/names.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "check:deployment": "tsx scripts/check-deployment.ts",
+    "verify:live": "tsx scripts/verify-identity.ts"
+  },
+  "dependencies": {
+    "@adraffy/ens-normalize": "^1.11.0",
+    "viem": "^2.56.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsx": "^4.20.0",
+    "typescript": "^5"
+  }
+}
