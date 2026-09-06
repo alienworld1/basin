@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { appMetadata } from "@/src/server/config/app-metadata";
+import { BasinAuthProvider } from "@/src/ui/auth/auth-provider";
 
 import { ibmPlexMono, instrumentSans } from "./fonts";
 import "./globals.css";
@@ -27,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to main content
         </a>
-        {children}
+        <BasinAuthProvider>{children}</BasinAuthProvider>
       </body>
     </html>
   );
