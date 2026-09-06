@@ -16,6 +16,8 @@ import {
   PaymentEvent,
   Receipt,
   SettlementVersion,
+  Organization,
+  OrganizationMember,
   Workspace,
 } from "../src/schema/tables";
 import { isolatedDatabase } from "./database";
@@ -77,6 +79,57 @@ test("lossless validation, canonical users, scoped workspace and membership", as
     ),
   );
   assert.equal(users[0].id, users[1].id);
+  const personalWorkspace = await api.workspaces.createPersonalWorkspace(
+    users[0].id,
+    "Concurrent user",
+  );
+  const organizationWorkspace =
+    await api.workspaces.createOrganizationWorkspace(
+      users[0].id,
+      "Concurrent company",
+    );
+  const accessible = await api.workspaces.listAccessibleWorkspaces(users[0].id);
+  assert.deepEqual(
+    accessible
+      .filter((workspace) =>
+        [personalWorkspace.id, organizationWorkspace.id]
+          .map(String)
+          .includes(workspace.id),
+      )
+      .map((workspace) => workspace.role),
+    ["OWNER", "ADMIN"],
+  );
+  const [organization] = await database.db
+    .select()
+    .from(Organization)
+    .where(eq(Organization.workspace_id, organizationWorkspace.id));
+  const [administrator] = await database.db
+    .select()
+    .from(OrganizationMember)
+    .where(
+      and(
+        eq(OrganizationMember.organization_id, organization.id),
+        eq(OrganizationMember.user_id, users[0].id),
+      ),
+    );
+  assert.equal(administrator.role, "ADMIN");
+  await rejects(
+    api.workspaces.readWorkspace(other.user.id, organizationWorkspace.id),
+    "NOT_FOUND",
+  );
+  const [{ value: beforeInvalidOrganization }] = await database.db
+    .select({ value: count() })
+    .from(Workspace)
+    .where(eq(Workspace.owner_user_id, users[0].id));
+  await rejects(
+    api.workspaces.createOrganizationWorkspace(users[0].id, " "),
+    "INVALID_INPUT",
+  );
+  const [{ value: afterInvalidOrganization }] = await database.db
+    .select({ value: count() })
+    .from(Workspace)
+    .where(eq(Workspace.owner_user_id, users[0].id));
+  assert.equal(afterInvalidOrganization, beforeInvalidOrganization);
   const memberships = await Promise.all(
     [1, 2].map(() =>
       api.workspaces.addMember(envelope.org.organization.id, {

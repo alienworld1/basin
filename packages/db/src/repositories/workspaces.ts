@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { recordId } from "@basin/domain";
 import {
@@ -43,6 +43,136 @@ export function workspaceRepository(db: Database) {
         return found(
           (await db.insert(Workspace).values(values).returning())[0],
         );
+      });
+    },
+    createPersonalWorkspace(userId: bigint, displayName: string) {
+      return safely(async () => {
+        recordId.parse(userId);
+        const values = workspaceInput.parse({
+          type: "PERSONAL",
+          display_name: displayName,
+          owner_user_id: userId,
+        });
+        return db.transaction(async (tx) => {
+          await tx
+            .update(User)
+            .set({ display_name: values.display_name, updated_at: new Date() })
+            .where(and(eq(User.id, userId), isNull(User.display_name)));
+          return found(
+            (await tx.insert(Workspace).values(values).returning())[0],
+          );
+        });
+      });
+    },
+    createOrganizationWorkspace(userId: bigint, displayName: string) {
+      return safely(async () => {
+        recordId.parse(userId);
+        const values = workspaceInput.parse({
+          type: "ORGANIZATION",
+          display_name: displayName,
+          owner_user_id: userId,
+        });
+        return db.transaction(async (tx) => {
+          const workspace = found(
+            (await tx.insert(Workspace).values(values).returning())[0],
+          );
+          const organization = found(
+            (
+              await tx
+                .insert(Organization)
+                .values({ workspace_id: workspace.id })
+                .returning()
+            )[0],
+          );
+          await tx.insert(OrganizationMember).values({
+            organization_id: organization.id,
+            user_id: userId,
+            role: "ADMIN",
+          });
+          return workspace;
+        });
+      });
+    },
+    listAccessibleWorkspaces(userId: bigint) {
+      return safely(async () => {
+        recordId.parse(userId);
+        const rows = await db
+          .select({
+            workspace: Workspace,
+            memberRole: OrganizationMember.role,
+          })
+          .from(Workspace)
+          .leftJoin(Organization, eq(Organization.workspace_id, Workspace.id))
+          .leftJoin(
+            OrganizationMember,
+            and(
+              eq(OrganizationMember.organization_id, Organization.id),
+              eq(OrganizationMember.user_id, userId),
+            ),
+          )
+          .where(
+            or(
+              and(
+                eq(Workspace.type, "PERSONAL"),
+                eq(Workspace.owner_user_id, userId),
+              ),
+              and(
+                eq(Workspace.type, "ORGANIZATION"),
+                eq(OrganizationMember.user_id, userId),
+              ),
+            ),
+          )
+          .orderBy(asc(Workspace.created_at), asc(Workspace.id));
+        return rows.map(({ workspace, memberRole }) => ({
+          id: workspace.id.toString(),
+          name: workspace.display_name,
+          type:
+            workspace.type === "PERSONAL"
+              ? ("personal" as const)
+              : ("organization" as const),
+          role:
+            workspace.type === "PERSONAL"
+              ? ("OWNER" as const)
+              : found(memberRole),
+        }));
+      });
+    },
+    readWorkspaceAccess(userId: bigint, workspaceId: bigint) {
+      return safely(async () => {
+        recordId.parse(userId);
+        recordId.parse(workspaceId);
+        const [row] = await db
+          .select({
+            workspace: Workspace,
+            organizationId: Organization.id,
+            memberRole: OrganizationMember.role,
+          })
+          .from(Workspace)
+          .leftJoin(Organization, eq(Organization.workspace_id, Workspace.id))
+          .leftJoin(
+            OrganizationMember,
+            and(
+              eq(OrganizationMember.organization_id, Organization.id),
+              eq(OrganizationMember.user_id, userId),
+            ),
+          )
+          .where(
+            and(
+              eq(Workspace.id, workspaceId),
+              or(
+                and(
+                  eq(Workspace.type, "PERSONAL"),
+                  eq(Workspace.owner_user_id, userId),
+                ),
+                and(
+                  eq(Workspace.type, "ORGANIZATION"),
+                  eq(OrganizationMember.user_id, userId),
+                ),
+              ),
+            ),
+          );
+        const match = found(row);
+        return match;
       });
     },
     readWorkspace(userId: bigint, workspaceId: bigint) {
