@@ -9,6 +9,7 @@ import { receiptRepository } from "./repositories/receipts";
 export { databaseHealth } from "./health";
 export type { DatabaseHealth } from "./health";
 export type * from "./evidence";
+export { attestInitialIdentity } from "./evidence-registry";
 
 export function createPersistence(connectionString: string) {
   const connection = connectDatabase(connectionString);

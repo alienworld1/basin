@@ -6,6 +6,7 @@ import {
   Workspace,
   Organization,
   OrganizationMember,
+  BasinIdentity,
 } from "../schema/tables";
 import { userInput, workspaceInput, organizationMemberInput } from "../inputs";
 import type { Database } from "../client";
@@ -100,6 +101,7 @@ export function workspaceRepository(db: Database) {
           .select({
             workspace: Workspace,
             memberRole: OrganizationMember.role,
+            identity: BasinIdentity,
           })
           .from(Workspace)
           .leftJoin(Organization, eq(Organization.workspace_id, Workspace.id))
@@ -110,6 +112,7 @@ export function workspaceRepository(db: Database) {
               eq(OrganizationMember.user_id, userId),
             ),
           )
+          .leftJoin(BasinIdentity, eq(BasinIdentity.workspace_id, Workspace.id))
           .where(
             or(
               and(
@@ -123,7 +126,7 @@ export function workspaceRepository(db: Database) {
             ),
           )
           .orderBy(asc(Workspace.created_at), asc(Workspace.id));
-        return rows.map(({ workspace, memberRole }) => ({
+        return rows.map(({ workspace, memberRole, identity }) => ({
           id: workspace.id.toString(),
           name: workspace.display_name,
           type:
@@ -134,6 +137,17 @@ export function workspaceRepository(db: Database) {
             workspace.type === "PERSONAL"
               ? ("OWNER" as const)
               : found(memberRole),
+          ...(identity
+            ? {
+                identity: {
+                  name: identity.ens_name,
+                  status: identity.protocol_status,
+                  controllerAddress: identity.controller_address,
+                  resolverAddress: identity.resolver_address,
+                  identityEpoch: identity.identity_epoch,
+                },
+              }
+            : {}),
         }));
       });
     },

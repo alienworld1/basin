@@ -8,12 +8,116 @@ import {
 } from "../schema/tables";
 import { basinIdentityInput, identityAuthorityVersionInput } from "../inputs";
 import type { Database } from "../client";
-import type { VerifiedIdentity, VerifiedIdentityAuthority } from "../evidence";
+import type {
+  VerifiedIdentity,
+  VerifiedIdentityAuthority,
+  VerifiedInitialIdentity,
+} from "../evidence";
 import { requireEvidence } from "../evidence-registry";
 import { found, requireMatch, safely } from "../errors";
 
 export function identityRepository(db: Database) {
   return {
+    findByWorkspace(workspaceId: bigint) {
+      return safely(async () => {
+        recordId.parse(workspaceId);
+        const [identity] = await db
+          .select()
+          .from(BasinIdentity)
+          .where(eq(BasinIdentity.workspace_id, workspaceId));
+        return identity ?? null;
+      });
+    },
+    findCurrentAuthority(workspaceId: bigint) {
+      return safely(async () => {
+        recordId.parse(workspaceId);
+        const [row] = await db
+          .select({ version: IdentityAuthorityVersion })
+          .from(IdentityAuthorityVersion)
+          .innerJoin(
+            BasinIdentity,
+            eq(BasinIdentity.id, IdentityAuthorityVersion.basin_identity_id),
+          )
+          .where(
+            and(
+              eq(BasinIdentity.workspace_id, workspaceId),
+              isNull(IdentityAuthorityVersion.superseded_at),
+            ),
+          );
+        return row?.version ?? null;
+      });
+    },
+    finalizeInitial(workspaceId: bigint, evidence: VerifiedInitialIdentity) {
+      return safely(async () => {
+        recordId.parse(workspaceId);
+        requireEvidence(evidence, "initialIdentity");
+        const identityValues = basinIdentityInput.parse(evidence.identity);
+        requireMatch(
+          identityValues.workspace_id === workspaceId &&
+            identityValues.protocol_status === "ACTIVE",
+        );
+        return db.transaction(async (tx) => {
+          const [inserted] = await tx
+            .insert(BasinIdentity)
+            .values(identityValues)
+            .onConflictDoNothing()
+            .returning();
+          const identity =
+            inserted ??
+            found(
+              (
+                await tx
+                  .select()
+                  .from(BasinIdentity)
+                  .where(eq(BasinIdentity.workspace_id, workspaceId))
+              )[0],
+            );
+          requireMatch(
+            identity.payee_id === identityValues.payee_id &&
+              identity.ens_name === identityValues.ens_name &&
+              identity.controller_address ===
+                identityValues.controller_address &&
+              identity.resolver_address === identityValues.resolver_address &&
+              identity.identity_epoch === identityValues.identity_epoch,
+          );
+          const authorityValues = identityAuthorityVersionInput.parse({
+            ...evidence.authority,
+            basin_identity_id: identity.id,
+          });
+          await tx
+            .insert(IdentityAuthorityVersion)
+            .values(authorityValues)
+            .onConflictDoNothing();
+          const authority = found(
+            (
+              await tx
+                .select()
+                .from(IdentityAuthorityVersion)
+                .where(
+                  and(
+                    eq(IdentityAuthorityVersion.basin_identity_id, identity.id),
+                    eq(
+                      IdentityAuthorityVersion.identity_epoch,
+                      authorityValues.identity_epoch,
+                    ),
+                  ),
+                )
+            )[0],
+          );
+          requireMatch(
+            authority.controller_address ===
+              authorityValues.controller_address &&
+              authority.identity_resolver_address ===
+                authorityValues.identity_resolver_address &&
+              authority.evidence_transaction_hash ===
+                authorityValues.evidence_transaction_hash &&
+              authority.evidence_block_number ===
+                authorityValues.evidence_block_number,
+          );
+          return { identity, authority };
+        });
+      });
+    },
     create(workspaceId: bigint, evidence: VerifiedIdentity) {
       return safely(async () => {
         recordId.parse(workspaceId);

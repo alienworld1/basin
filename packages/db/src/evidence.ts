@@ -14,6 +14,17 @@ export type VerifiedIdentityAuthority = Verified<
   "identityAuthority",
   z.input<typeof input.identityAuthorityVersionInput>
 >;
+export type InitialIdentityEvidenceInput = {
+  identity: z.input<typeof input.basinIdentityInput>;
+  authority: Omit<
+    z.input<typeof input.identityAuthorityVersionInput>,
+    "basin_identity_id"
+  >;
+};
+export type VerifiedInitialIdentity = Verified<
+  "initialIdentity",
+  InitialIdentityEvidenceInput
+>;
 export type VerifiedGeneration = Verified<
   "generation",
   z.input<typeof input.approvedPayeeGenerationInput> & {
