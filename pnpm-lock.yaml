@@ -141,6 +141,9 @@ importers:
         specifier: ^2.56.0
         version: 2.56.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.5.4)
     devDependencies:
+      '@next/env':
+        specifier: 16.3.4
+        version: 16.3.4
       '@types/node':
         specifier: ^20.19.43
         version: 20.19.43

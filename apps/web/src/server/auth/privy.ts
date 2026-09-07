@@ -8,6 +8,7 @@ import {
   RateLimitError,
 } from "@privy-io/node";
 import { z } from "zod";
+import { address } from "@basin/domain";
 
 import { AuthError } from "./errors";
 
@@ -71,13 +72,18 @@ function getPrivyEnvironment() {
 
 let client: PrivyClient | undefined;
 
-export const verifyPrivyAccessToken: TokenVerifier = async (accessToken) => {
+function getPrivyClient() {
   const environment = getPrivyEnvironment();
   client ??= new PrivyClient({
     appId: environment.appId,
     appSecret: environment.appSecret,
     jwtVerificationKey: environment.verificationKey,
   });
+  return { client, environment };
+}
+
+export const verifyPrivyAccessToken: TokenVerifier = async (accessToken) => {
+  const { client, environment } = getPrivyClient();
   try {
     const claims = await client.utils().auth().verifyAccessToken(accessToken);
     return normalizeVerifiedClaims(claims, environment.appId);
@@ -98,3 +104,73 @@ export const verifyPrivyAccessToken: TokenVerifier = async (accessToken) => {
     throw new AuthError("UNAVAILABLE", "Authentication is unavailable.");
   }
 };
+
+const privyUserSchema = z.object({
+  id: z.string(),
+  linked_accounts: z.array(
+    z.looseObject({
+      type: z.string(),
+      address: z.string().optional(),
+      chain_type: z.string().optional(),
+      connector_type: z.string().optional(),
+      wallet_client: z.string().optional(),
+      wallet_index: z.number().int().nonnegative().optional(),
+    }),
+  ),
+});
+
+export async function getPrivyEmbeddedController(privyUserId: string) {
+  const { environment } = getPrivyClient();
+  try {
+    const response = await fetch(
+      `https://api.privy.io/v1/users/${encodeURIComponent(privyUserId)}`,
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${environment.appId}:${environment.appSecret}`).toString("base64")}`,
+          "privy-app-id": environment.appId,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8_000),
+      },
+    );
+    if (!response.ok) {
+      throw new AuthError(
+        response.status === 401 || response.status === 403
+          ? "UNAUTHENTICATED"
+          : "UNAVAILABLE",
+        response.status === 401 || response.status === 403
+          ? "Your session ended."
+          : "We couldn't prepare your personal account. Try again.",
+      );
+    }
+    const user = privyUserSchema.parse(await response.json());
+    if (user.id !== privyUserId) throw new Error("Wrong Privy user");
+    const wallet = user.linked_accounts
+      .filter(
+        (account) =>
+          account.type === "wallet" &&
+          account.chain_type === "ethereum" &&
+          account.connector_type === "embedded" &&
+          account.wallet_client === "privy" &&
+          account.address,
+      )
+      .toSorted(
+        (left, right) =>
+          (left.wallet_index ?? Number.MAX_SAFE_INTEGER) -
+          (right.wallet_index ?? Number.MAX_SAFE_INTEGER),
+      )[0];
+    if (!wallet?.address) {
+      throw new AuthError(
+        "UNAVAILABLE",
+        "Finish your personal setup before claiming an identity.",
+      );
+    }
+    return address.parse(wallet.address);
+  } catch (error) {
+    if (error instanceof AuthError) throw error;
+    throw new AuthError(
+      "UNAVAILABLE",
+      "We couldn't prepare your personal account. Try again.",
+    );
+  }
+}

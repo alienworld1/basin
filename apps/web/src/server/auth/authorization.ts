@@ -99,3 +99,18 @@ export async function requireOrganizationRole(
   }
   return access;
 }
+
+export async function requirePersonalWorkspaceOwner(
+  persistence: Persistence,
+  user: BasinUser,
+  workspaceId: string,
+) {
+  const access = await requireWorkspaceAccess(persistence, user, workspaceId);
+  if (
+    access.workspace.type !== "PERSONAL" ||
+    access.workspace.owner_user_id !== user.id
+  ) {
+    throw new AuthError("FORBIDDEN", "You don't have permission to do that.");
+  }
+  return access.workspace;
+}

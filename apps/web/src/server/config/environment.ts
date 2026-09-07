@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { databaseUrl } from "@basin/domain";
 import type { DatabaseHealth } from "@basin/db";
+import { address } from "@basin/domain";
 
 import { networkConfig } from "./network";
 
@@ -36,6 +37,17 @@ const environmentSchema = z
       (value) => (value === "" ? undefined : value),
       httpUrl("Set a valid Ethereum Sepolia RPC URL.").optional(),
     ),
+    ENSV2_BASIN_REGISTRY_ADDRESS: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      address.optional(),
+    ),
+    ENSV2_REGISTRAR_PRIVATE_KEY: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z
+        .string()
+        .regex(/^0x[\da-fA-F]{64}$/)
+        .optional(),
+    ),
     DEPLOYMENT_REVISION: z.preprocess(
       (value) => (value === "" ? undefined : value),
       z.string().trim().min(1).max(120).optional(),
@@ -57,6 +69,8 @@ const rawEnvironment = {
   APP_ENV: process.env.APP_ENV,
   APP_URL: process.env.APP_URL,
   SEPOLIA_RPC_URL: process.env.SEPOLIA_RPC_URL,
+  ENSV2_BASIN_REGISTRY_ADDRESS: process.env.ENSV2_BASIN_REGISTRY_ADDRESS,
+  ENSV2_REGISTRAR_PRIVATE_KEY: process.env.ENSV2_REGISTRAR_PRIVATE_KEY,
   DEPLOYMENT_REVISION: process.env.DEPLOYMENT_REVISION,
 };
 
@@ -71,6 +85,7 @@ export type EnvironmentHealth = {
     database: DatabaseHealth;
     configuration: "ok" | "invalid";
     rpc: "configured" | "not_required";
+    identity: "configured" | "not_configured";
   };
   version: string | null;
 };
@@ -109,6 +124,7 @@ export function getEnvironmentHealth(): EnvironmentHealth {
         database: "unavailable",
         configuration: "invalid",
         rpc: "not_required",
+        identity: "not_configured",
       },
       version: null,
     };
@@ -125,7 +141,30 @@ export function getEnvironmentHealth(): EnvironmentHealth {
       database: "unavailable",
       configuration: "ok",
       rpc: result.data.SEPOLIA_RPC_URL ? "configured" : "not_required",
+      identity:
+        result.data.SEPOLIA_RPC_URL &&
+        result.data.ENSV2_BASIN_REGISTRY_ADDRESS &&
+        result.data.ENSV2_REGISTRAR_PRIVATE_KEY
+          ? "configured"
+          : "not_configured",
     },
     version: result.data.DEPLOYMENT_REVISION ?? null,
+  };
+}
+
+export function getEnsServerEnvironment() {
+  const environment = getServerEnvironment();
+  if (
+    !environment.SEPOLIA_RPC_URL ||
+    !environment.ENSV2_BASIN_REGISTRY_ADDRESS
+  ) {
+    throw new Error("Basin identity setup is not configured.");
+  }
+  return {
+    rpcUrl: environment.SEPOLIA_RPC_URL,
+    basinRegistryAddress:
+      environment.ENSV2_BASIN_REGISTRY_ADDRESS as `0x${string}`,
+    registrarPrivateKey: environment.ENSV2_REGISTRAR_PRIVATE_KEY as
+      `0x${string}` | undefined,
   };
 }
