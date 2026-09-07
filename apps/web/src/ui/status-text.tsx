@@ -4,11 +4,17 @@ type StatusTextProps = {
   technical?: boolean;
 };
 
-export function StatusText({ label, value, technical = false }: StatusTextProps) {
+export function StatusText({
+  label,
+  value,
+  technical = false,
+}: StatusTextProps) {
   return (
     <div className="grid grid-cols-2 gap-4 border-t border-line py-4 text-sm">
       <dt className="text-ink-tertiary">{label}</dt>
-      <dd className={`text-right text-ink ${technical ? "font-mono" : ""}`}>
+      <dd
+        className={`min-w-0 text-right text-ink ${technical ? "wrap-break-word font-mono text-xs" : ""}`}
+      >
         {value}
       </dd>
     </div>

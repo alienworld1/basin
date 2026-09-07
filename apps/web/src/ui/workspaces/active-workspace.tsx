@@ -5,11 +5,21 @@ import { useEffect, useRef, useState } from "react";
 import { useBasinAuth } from "../auth/auth-provider";
 import { Button } from "../button";
 import type { WorkspaceSummary } from "../shell-types";
+import type { IdentityTechnicalDetails } from "../../shared/identity-types";
+import { PersonalIdentity } from "../identities/personal-identity";
 
 export function ActiveWorkspace({
   workspace,
+  userId,
+  onIdentityDetailsChange,
+  onPendingChange,
 }: {
   workspace: WorkspaceSummary;
+  userId: string;
+  onIdentityDetailsChange: (
+    details: IdentityTechnicalDetails | undefined,
+  ) => void;
+  onPendingChange: (pending: boolean) => void;
 }) {
   const auth = useBasinAuth();
   const [preparing, setPreparing] = useState(false);
@@ -23,6 +33,23 @@ export function ActiveWorkspace({
   useEffect(() => {
     headingRef.current?.focus();
   }, [workspace.id]);
+
+  if (
+    workspace.type === "personal" &&
+    !personalIncomplete &&
+    !personalLoading
+  ) {
+    return (
+      <section className="border-t border-line-strong pt-8">
+        <PersonalIdentity
+          userId={userId}
+          workspace={workspace}
+          onIdentityDetailsChange={onIdentityDetailsChange}
+          onPendingChange={onPendingChange}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="border-t border-line-strong pt-8">

@@ -16,6 +16,7 @@ import type {
   NavigationItem,
   WorkspaceSummary,
 } from "../shell-types";
+import type { IdentityTechnicalDetails } from "../../shared/identity-types";
 import { ActiveWorkspace } from "./active-workspace";
 import { WorkspaceChooser } from "./workspace-chooser";
 import { WorkspaceOnboarding } from "./workspace-onboarding";
@@ -57,6 +58,18 @@ export function WorkspaceApp({
   const [creating, setCreating] = useState(false);
   const [resolvingWorkspace, setResolvingWorkspace] = useState(false);
   const [isNavigating, startNavigation] = useTransition();
+  const [identityDetails, setIdentityDetails] =
+    useState<IdentityTechnicalDetails>();
+  const [identityPending, setIdentityPending] = useState(false);
+  const handleIdentityDetails = useCallback(
+    (details: IdentityTechnicalDetails | undefined) =>
+      setIdentityDetails(details),
+    [],
+  );
+  const handleIdentityPending = useCallback(
+    (pending: boolean) => setIdentityPending(pending),
+    [],
+  );
 
   const bootstrap = useCallback(async () => {
     setStatus("loading");
@@ -114,6 +127,7 @@ export function WorkspaceApp({
       : requestedWorkspaceId;
   const activeWorkspace =
     workspaces.find((item) => item.id === selectedId) ?? null;
+
   const accountControl = (
     <AccountControl
       label={result?.user.displayName ?? "Basin account"}
@@ -127,6 +141,16 @@ export function WorkspaceApp({
   );
 
   const choose = async (workspace: WorkspaceSummary, justCreated = false) => {
+    if (
+      identityPending &&
+      activeWorkspace &&
+      workspace.id !== activeWorkspace.id &&
+      !window.confirm(
+        "Your identity claim may continue while you switch workspaces. Switch anyway?",
+      )
+    ) {
+      return false;
+    }
     setResolvingWorkspace(true);
     try {
       const response = await requestBootstrap(auth.getAccessToken);
@@ -147,6 +171,8 @@ export function WorkspaceApp({
       setResult(refreshed);
       setStatus("ready");
       setCreating(false);
+      setIdentityDetails(undefined);
+      setIdentityPending(false);
       setSelectedOverride({ id: workspace.id, from: requestedWorkspaceId });
       startNavigation(() => router.replace(`/app?workspace=${workspace.id}`));
       return true;
@@ -294,7 +320,15 @@ export function WorkspaceApp({
       />
     );
   } else {
-    content = <ActiveWorkspace workspace={activeWorkspace} />;
+    content = (
+      <ActiveWorkspace
+        key={activeWorkspace.id}
+        workspace={activeWorkspace}
+        userId={result!.user.id}
+        onIdentityDetailsChange={handleIdentityDetails}
+        onPendingChange={handleIdentityPending}
+      />
+    );
   }
 
   return (
@@ -307,6 +341,7 @@ export function WorkspaceApp({
       onSelectWorkspace={choose}
       onCreateWorkspace={() => setCreating(true)}
       switchingWorkspace={isNavigating || resolvingWorkspace}
+      identityDetails={identityDetails}
     >
       {content}
     </AppShell>

@@ -7,7 +7,6 @@ type LandingContentProps = {
   disabled: boolean;
   unavailable: boolean;
   signInFailed: boolean;
-  openFailed?: boolean;
 };
 
 export function LandingContent({
@@ -15,7 +14,6 @@ export function LandingContent({
   disabled,
   unavailable,
   signInFailed,
-  openFailed,
 }: LandingContentProps) {
   return (
     <div className="min-h-dvh px-6 py-6 sm:px-8 lg:px-12 lg:py-8">
@@ -45,10 +43,6 @@ export function LandingContent({
           {unavailable ? (
             <p className="mt-3 text-sm text-state-danger" role="status">
               Basin sign-in is unavailable right now.
-            </p>
-          ) : openFailed ? (
-            <p className="mt-3 text-sm text-state-danger" role="alert">
-              We couldn&apos;t open your account. Try again.
             </p>
           ) : signInFailed ? (
             <p className="mt-3 text-sm text-state-danger" role="alert">

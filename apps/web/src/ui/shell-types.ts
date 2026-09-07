@@ -3,6 +3,13 @@ export type WorkspaceSummary = {
   name: string;
   type: "personal" | "organization";
   role: "OWNER" | "ADMIN" | "PAYMENT_OPERATOR";
+  identity?: {
+    name: string;
+    status: "PENDING" | "ACTIVE" | "FAILED" | "REAPPROVAL_REQUIRED";
+    controllerAddress: string;
+    resolverAddress: string;
+    identityEpoch: string;
+  };
 };
 
 export type AuthBootstrapResult = {

@@ -21,7 +21,12 @@ Open `http://localhost:3000`. The public product page is at `/`, the authenticat
 
 Create a Privy development app, enable email one-time-code login, add `http://localhost:3000` as an allowed origin, and set `NEXT_PUBLIC_PRIVY_APP_ID` plus `PRIVY_APP_SECRET`. `NEXT_PUBLIC_PRIVY_CLIENT_ID` and `PRIVY_JWT_VERIFICATION_KEY` are optional. Personal workspace creation provisions an embedded EVM wallet on demand; Organization creation intentionally does not provision a treasury wallet yet.
 
-`SEPOLIA_RPC_URL` is optional at this stage because the application does not make network requests. `APP_URL` must be an absolute URL outside local development.
+Identity setup requires `SEPOLIA_RPC_URL`, the controlled ENSv2
+`ENSV2_BASIN_REGISTRY_ADDRESS`, and the server-only
+`ENSV2_REGISTRAR_PRIVATE_KEY`. The registry must be mounted at `basin.eth` on
+the pinned Sepolia ENSv2 hierarchy and the registrar must hold only the narrow
+namespace roles described in [the ENS integration guide](packages/ens/README.md).
+`APP_URL` must be an absolute URL outside local development.
 
 ## Commands
 
@@ -32,6 +37,7 @@ pnpm typecheck
 pnpm build
 pnpm test:auth
 pnpm test:db
+pnpm test:ens
 ```
 
 ## Authentication and workspace verification
@@ -41,6 +47,9 @@ pnpm test:db
 3. Sign out, sign back in, and confirm the persisted workspace is restored.
 4. Create an Organization workspace from the switcher and confirm both workspaces appear in the chooser.
 5. Edit the workspace query to malformed text, then to a valid ID the user cannot access, and confirm the not-found and permission recovery states reveal no workspace data.
+6. In the Personal workspace, enter an available label, review and claim it,
+   wait for read-back verification, then refresh and confirm the same active
+   identity is resolved from Sepolia.
 
 The repository is one pnpm workspace. `apps/web` is the only runtime application and serves both the interface and Route Handlers; there is no separate backend process.
 

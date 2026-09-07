@@ -19,6 +19,7 @@
     "viem": "^2.56.0"
   },
   "devDependencies": {
+    "@next/env": "16.3.4",
     "@types/node": "^20.19.43",
     "tsx": "^4.20.0",
     "typescript": "^5"
