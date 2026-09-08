@@ -12,6 +12,7 @@ import type {
 import { TechnicalDetails } from "./technical-details";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import type { IdentityTechnicalDetails } from "../shared/identity-types";
+import type { TreasuryTechnicalDetails } from "../shared/treasury-types";
 
 type AppShellProps = WorkspaceShellContext & {
   navigation: NavigationItem[];
@@ -21,6 +22,7 @@ type AppShellProps = WorkspaceShellContext & {
   onCreateWorkspace: () => void;
   switchingWorkspace?: boolean;
   identityDetails?: IdentityTechnicalDetails;
+  treasuryDetails?: TreasuryTechnicalDetails;
   children: React.ReactNode;
 };
 
@@ -34,6 +36,7 @@ export function AppShell({
   onCreateWorkspace,
   switchingWorkspace,
   identityDetails,
+  treasuryDetails,
   children,
 }: AppShellProps) {
   return (
@@ -62,6 +65,7 @@ export function AppShell({
           <TechnicalDetails
             details={inspectorDetails}
             identityDetails={identityDetails}
+            treasuryDetails={treasuryDetails}
           />
         </DesktopTechnicalInspector>
         <div className="mt-6">{accountControl}</div>
@@ -89,6 +93,7 @@ export function AppShell({
             <TechnicalDetails
               details={inspectorDetails}
               identityDetails={identityDetails}
+              treasuryDetails={treasuryDetails}
             />
           }
           accountControl={accountControl}

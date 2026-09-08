@@ -7,12 +7,17 @@ import { Button } from "../button";
 import type { WorkspaceSummary } from "../shell-types";
 import type { IdentityTechnicalDetails } from "../../shared/identity-types";
 import { PersonalIdentity } from "../identities/personal-identity";
+import type { TreasuryTechnicalDetails } from "../../shared/treasury-types";
+import { TreasuryControls } from "../treasury/treasury-controls";
 
 export function ActiveWorkspace({
   workspace,
   userId,
   onIdentityDetailsChange,
   onPendingChange,
+  onTreasuryDetailsChange,
+  onTreasuryPendingChange,
+  onSessionEnded,
 }: {
   workspace: WorkspaceSummary;
   userId: string;
@@ -20,6 +25,9 @@ export function ActiveWorkspace({
     details: IdentityTechnicalDetails | undefined,
   ) => void;
   onPendingChange: (pending: boolean) => void;
+  onTreasuryDetailsChange: (details: TreasuryTechnicalDetails | undefined) => void;
+  onTreasuryPendingChange: (pending: boolean) => void;
+  onSessionEnded: () => void;
 }) {
   const auth = useBasinAuth();
   const [preparing, setPreparing] = useState(false);
@@ -50,6 +58,27 @@ export function ActiveWorkspace({
     );
   }
 
+  if (workspace.type === "organization") {
+    return (
+      <section className="border-t border-line-strong pt-8">
+        <p className="mb-3 text-sm font-medium text-ink-tertiary">Organization workspace</p>
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="wrap-break-word text-title font-semibold tracking-[-0.03em]"
+        >
+          {workspace.name}
+        </h1>
+        <TreasuryControls
+          workspace={workspace}
+          onTechnicalDetailsChange={onTreasuryDetailsChange}
+          onPendingChange={onTreasuryPendingChange}
+          onSessionEnded={onSessionEnded}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="border-t border-line-strong pt-8">
       <p className="mb-3 text-sm font-medium text-ink-tertiary">
@@ -75,11 +104,7 @@ export function ActiveWorkspace({
             ? "Opening your workspace…"
             : "Workspace ready"}
       </p>
-      {workspace.type === "organization" ? (
-        <p className="mt-3 text-sm text-ink-secondary">
-          {workspace.role === "ADMIN" ? "Administrator" : "Payment operator"}
-        </p>
-      ) : personalIncomplete ? (
+      {personalIncomplete ? (
         <div className="mt-5">
           <p className="max-w-lg text-sm leading-relaxed text-ink-secondary">
             Prepare your personal account before continuing to identity setup.

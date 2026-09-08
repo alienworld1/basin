@@ -4,15 +4,19 @@ import type { InspectorDetails } from "./shell-types";
 import { StatusText } from "./status-text";
 import type { IdentityTechnicalDetails as IdentityDetails } from "../shared/identity-types";
 import { IdentityTechnicalDetails } from "./identities/identity-technical-details";
+import type { TreasuryTechnicalDetails as TreasuryDetails } from "../shared/treasury-types";
+import { TreasuryTechnicalDetails } from "./treasury/treasury-technical-details";
 
 type TechnicalDetailsProps = {
   details: InspectorDetails;
   identityDetails?: IdentityDetails;
+  treasuryDetails?: TreasuryDetails;
 };
 
 export function TechnicalDetails({
   details,
   identityDetails,
+  treasuryDetails,
 }: TechnicalDetailsProps) {
   return (
     <>
@@ -49,6 +53,7 @@ export function TechnicalDetails({
       {identityDetails?.receiving ? (
         <ReceivingEvidence details={identityDetails.receiving} />
       ) : null}
+      {treasuryDetails ? <TreasuryTechnicalDetails details={treasuryDetails} /> : null}
     </>
   );
 }

@@ -17,6 +17,7 @@ import type {
   WorkspaceSummary,
 } from "../shell-types";
 import type { IdentityTechnicalDetails } from "../../shared/identity-types";
+import type { TreasuryTechnicalDetails } from "../../shared/treasury-types";
 import { ActiveWorkspace } from "./active-workspace";
 import { WorkspaceChooser } from "./workspace-chooser";
 import { WorkspaceOnboarding } from "./workspace-onboarding";
@@ -61,6 +62,8 @@ export function WorkspaceApp({
   const [identityDetails, setIdentityDetails] =
     useState<IdentityTechnicalDetails>();
   const [identityPending, setIdentityPending] = useState(false);
+  const [treasuryDetails, setTreasuryDetails] = useState<TreasuryTechnicalDetails>();
+  const [treasuryPending, setTreasuryPending] = useState(false);
   const handleIdentityDetails = useCallback(
     (details: IdentityTechnicalDetails | undefined) =>
       setIdentityDetails(details),
@@ -68,6 +71,19 @@ export function WorkspaceApp({
   );
   const handleIdentityPending = useCallback(
     (pending: boolean) => setIdentityPending(pending),
+    [],
+  );
+  const handleTreasuryDetails = useCallback(
+    (details: TreasuryTechnicalDetails | undefined) =>
+      setTreasuryDetails(details),
+    [],
+  );
+  const handleTreasuryPending = useCallback(
+    (pending: boolean) => setTreasuryPending(pending),
+    [],
+  );
+  const handleSessionEnded = useCallback(
+    () => setStatus("session-ended"),
     [],
   );
 
@@ -142,11 +158,11 @@ export function WorkspaceApp({
 
   const choose = async (workspace: WorkspaceSummary, justCreated = false) => {
     if (
-      identityPending &&
+      (identityPending || treasuryPending) &&
       activeWorkspace &&
       workspace.id !== activeWorkspace.id &&
       !window.confirm(
-        "Your identity claim may continue while you switch workspaces. Switch anyway?",
+        `${treasuryPending ? "Your treasury approval" : "Your identity claim"} may continue while you switch workspaces. Switch anyway?`,
       )
     ) {
       return false;
@@ -173,6 +189,8 @@ export function WorkspaceApp({
       setCreating(false);
       setIdentityDetails(undefined);
       setIdentityPending(false);
+      setTreasuryDetails(undefined);
+      setTreasuryPending(false);
       setSelectedOverride({ id: workspace.id, from: requestedWorkspaceId });
       startNavigation(() => router.replace(`/app?workspace=${workspace.id}`));
       return true;
@@ -327,6 +345,9 @@ export function WorkspaceApp({
         userId={result!.user.id}
         onIdentityDetailsChange={handleIdentityDetails}
         onPendingChange={handleIdentityPending}
+        onTreasuryDetailsChange={handleTreasuryDetails}
+        onTreasuryPendingChange={handleTreasuryPending}
+        onSessionEnded={handleSessionEnded}
       />
     );
   }
@@ -342,6 +363,7 @@ export function WorkspaceApp({
       onCreateWorkspace={() => setCreating(true)}
       switchingWorkspace={isNavigating || resolvingWorkspace}
       identityDetails={identityDetails}
+      treasuryDetails={treasuryDetails}
     >
       {content}
     </AppShell>
