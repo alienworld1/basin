@@ -5,3 +5,6 @@ export * from "./record";
 export * from "./roles";
 export * from "./types";
 export * from "./adapter";
+export * from "./settlement-record";
+export * from "./settlement-errors";
+export * from "./settlement";

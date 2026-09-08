@@ -561,6 +561,7 @@ export function createEnsAdapter(config: EnsDeploymentConfig) {
     fullName: string,
     controllerInput: Address,
     transactionHash?: Hash,
+    atBlock?: bigint,
   ): Promise<VerifiedIdentityState> {
     const identity = normalizeBasinLabel(
       fullName.endsWith(`.${ENSV2_SEPOLIA_DEPLOYMENT.namespace}`)
@@ -599,7 +600,7 @@ export function createEnsAdapter(config: EnsDeploymentConfig) {
         );
       }
     } else {
-      blockNumber = await publicClient.getBlockNumber();
+      blockNumber = atBlock ?? (await publicClient.getBlockNumber());
     }
     try {
       const state = await publicClient.readContract({

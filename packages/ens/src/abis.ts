@@ -15,6 +15,7 @@ export const registryAbi = parseAbi([
 export const resolverAbi = parseAbi([
   "function initialize(address admin,uint256 roleBitmap,bytes[] setters)",
   "function data(bytes32 node,string key) view returns (bytes)",
+  "function getAlias(bytes fromName) view returns (bytes)",
   "function setData(bytes32 node,string key,bytes value)",
   "function authorizeDataRoles(bytes toName,string key,address account,bool grant) returns (bool)",
   "function multicall(bytes[] calls) returns (bytes[] results)",
