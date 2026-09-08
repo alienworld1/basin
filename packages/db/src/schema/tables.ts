@@ -15,3 +15,5 @@ export * from "./payment-event";
 export * from "./payment-authority-snapshot";
 export * from "./receipt";
 export * from "./idempotency-key";
+export * from "./receiving-preference";
+export * from "./settlement-operation";
