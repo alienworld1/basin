@@ -832,7 +832,7 @@ test("least-privilege runtime grants permit reads and reject deletion", async ()
     assert.equal(
       (await client.query("SELECT hash FROM drizzle.__drizzle_migrations")).rows
         .length,
-      2,
+      JSON.parse(readFileSync("src/migration-manifest.json", "utf8")).length,
     );
     await assert.rejects(
       client.query("DELETE FROM basin.payment"),

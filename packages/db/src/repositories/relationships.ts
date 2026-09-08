@@ -58,7 +58,7 @@ const publicSettlementColumns = () => {
   return columns;
 };
 
-export function relationshipRepository(db: Database) {
+export function relationshipRepository(db: Database | Transaction) {
   return {
     findOrCreate(organizationId: bigint, identityId: bigint) {
       return safely(async () => {
@@ -332,10 +332,8 @@ export function relationshipRepository(db: Database) {
         recordId.parse(organizationId);
         requireEvidence(evidence, "settlementVersion");
         const values = settlementVersionInput.parse(evidence);
-        // Protected descriptor storage is deliberately deferred to Module 5's key-management decision.
         requireMatch(
           !values.superseded_at &&
-            !values.destination_ciphertext &&
             !values.destination_fingerprint &&
             values.chain_id === 11155111,
         );
@@ -403,6 +401,18 @@ export function relationshipRepository(db: Database) {
                 isNull(SettlementVersion.superseded_at),
               ),
             );
+          if (previous?.settlement_epoch === values.settlement_epoch) {
+            requireMatch(
+              previous.commitment === values.commitment &&
+                previous.approved_security_root_id ===
+                  values.approved_security_root_id &&
+                previous.destination_ciphertext ===
+                  values.destination_ciphertext &&
+                previous.asset_address === values.asset_address &&
+                previous.valid_from.getTime() === values.valid_from.getTime(),
+            );
+            return previous;
+          }
           if (previous) {
             requireMatch(
               BigInt(values.settlement_epoch) >

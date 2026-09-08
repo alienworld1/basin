@@ -1,5 +1,6 @@
 import "server-only";
-import { connectDatabase } from "./client";
+import { receivingRepository } from "./repositories/receiving";
+import { connectRuntimeDatabase } from "./client";
 import { workspaceRepository } from "./repositories/workspaces";
 import { identityRepository } from "./repositories/identities";
 import { relationshipRepository } from "./repositories/relationships";
@@ -9,12 +10,16 @@ import { receiptRepository } from "./repositories/receipts";
 export { databaseHealth } from "./health";
 export type { DatabaseHealth } from "./health";
 export type * from "./evidence";
-export { attestInitialIdentity } from "./evidence-registry";
+export {
+  attestInitialIdentity,
+  attestSettlementVersion,
+} from "./evidence-registry";
 
 export function createPersistence(connectionString: string) {
-  const connection = connectDatabase(connectionString);
+  const connection = connectRuntimeDatabase(connectionString);
   return {
     workspaces: workspaceRepository(connection.db),
+    receiving: receivingRepository(connection.db),
     identities: identityRepository(connection.db),
     relationships: relationshipRepository(connection.db),
     obligations: obligationRepository(connection.db),
