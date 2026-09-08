@@ -36,3 +36,40 @@ export const idempotencyStatus = basin.enum(
 export const idempotencyScope = basin.enum("idempotency_scope", [
   "CREATE_PAYMENT",
 ]);
+export const treasuryStatus = basin.enum("treasury_status", [
+  "NOT_STARTED",
+  "PROVISIONING",
+  "CONTROL_READY",
+  "AWAITING_APPROVAL",
+  "READY",
+  "NEEDS_ATTENTION",
+  "FAILED",
+]);
+export const treasuryOperationType = basin.enum("treasury_operation_type", [
+  "PROVISION_TREASURY",
+  "ATTACH_ROUTINE_POLICY",
+  "RECONCILE_TREASURY",
+  "PROCESS_INTENT",
+]);
+export const treasuryOperationStep = basin.enum("treasury_operation_step", [
+  "STARTED",
+  "OWNER_QUORUM_VERIFIED",
+  "ORGANIZATION_VERIFIED",
+  "WALLET_VERIFIED",
+  "ROUTINE_SIGNER_VERIFIED",
+  "POLICY_VERIFIED",
+  "COMPLETE",
+]);
+export const treasuryOperationStatus = basin.enum("treasury_operation_status", [
+  "IN_PROGRESS",
+  "AWAITING_APPROVAL",
+  "COMPLETED",
+  "FAILED_RETRYABLE",
+  "FAILED_FINAL",
+]);
+export const webhookProcessingStatus = basin.enum("webhook_processing_status", [
+  "RECEIVED",
+  "PROCESSED",
+  "IGNORED",
+  "FAILED_RETRYABLE",
+]);

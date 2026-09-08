@@ -17,3 +17,7 @@ export * from "./receipt";
 export * from "./idempotency-key";
 export * from "./receiving-preference";
 export * from "./settlement-operation";
+export * from "./organization-treasury";
+export * from "./privy-provisioning-operation";
+export * from "./privy-webhook-receipt";
+export * from "./routine-signer-secret";
