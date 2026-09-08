@@ -15,7 +15,7 @@ export function migrationConnection() {
   );
   if (!parsed.success)
     throw new Error("Set the migration database connection before continuing.");
-  return connectDatabase(parsed.data, 1);
+  return connectDatabase(parsed.data, 1, 10000);
 }
 export async function inspectMigrations(
   connection: ReturnType<typeof connectDatabase>,

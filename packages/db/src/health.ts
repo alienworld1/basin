@@ -1,5 +1,5 @@
 import { bigint, integer, pgSchema, text } from "drizzle-orm/pg-core";
-import { connectDatabase } from "./client";
+import { connectRuntimeDatabase } from "./client";
 import expected from "./migration-manifest.json";
 
 const migrationRecords = pgSchema("drizzle").table("__drizzle_migrations", {
@@ -12,9 +12,9 @@ export async function databaseHealth(
   connectionString: string | undefined,
 ): Promise<DatabaseHealth> {
   if (!connectionString) return "unavailable";
-  let connection: ReturnType<typeof connectDatabase> | undefined;
+  let connection: ReturnType<typeof connectRuntimeDatabase> | undefined;
   try {
-    connection = connectDatabase(connectionString, 1);
+    connection = connectRuntimeDatabase(connectionString);
     const applied = await connection.db
       .select()
       .from(migrationRecords)
