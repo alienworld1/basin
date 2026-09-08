@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "NODE_OPTIONS=--conditions=react-server tsx --test test/*.test.ts",
-    "test:settlement": "NODE_OPTIONS=--conditions=react-server tsx --test test/settlement*.test.ts"
+    "test:settlement": "NODE_OPTIONS=--conditions=react-server tsx --test test/settlement*.test.ts",
+    "test:treasury": "NODE_OPTIONS=--conditions=react-server tsx --test test/treasury*.test.ts",
+    "verify:treasury": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-treasury-controls.ts"
   },
   "dependencies": {
     "@basin/db": "workspace:*",

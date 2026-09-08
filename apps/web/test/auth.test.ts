@@ -200,12 +200,24 @@ test("organization role checks deny personal workspaces and missing membership",
 
 test("mutation origin checks fail closed", () => {
   const previousAppUrl = process.env.APP_URL;
+  const previousAppEnvironment = process.env.APP_ENV;
+  const previousWebhookUrl = process.env.PRIVY_WEBHOOK_PUBLIC_URL;
   process.env.APP_URL = "https://basin.test/app";
+  process.env.APP_ENV = "development";
+  process.env.PRIVY_WEBHOOK_PUBLIC_URL =
+    "https://basin-tunnel.ngrok-free.dev/api/webhooks/privy";
   try {
     assert.doesNotThrow(() =>
       requireSameOrigin(
         new Request("https://basin.test/api/workspaces", {
           headers: { origin: "https://basin.test" },
+        }),
+      ),
+    );
+    assert.doesNotThrow(() =>
+      requireSameOrigin(
+        new Request("http://localhost:3000/api/treasury/setup", {
+          headers: { origin: "https://basin-tunnel.ngrok-free.dev" },
         }),
       ),
     );
@@ -215,12 +227,27 @@ test("mutation origin checks fail closed", () => {
           new Request("https://basin.test/api/workspaces", {
             headers: { origin: "https://attacker.test" },
           }),
+      ),
+      (error) => error instanceof AuthError && error.code === "FORBIDDEN",
+    );
+    process.env.APP_ENV = "production";
+    assert.throws(
+      () =>
+        requireSameOrigin(
+          new Request("https://basin.test/api/treasury/setup", {
+            headers: { origin: "https://basin-tunnel.ngrok-free.dev" },
+          }),
         ),
       (error) => error instanceof AuthError && error.code === "FORBIDDEN",
     );
   } finally {
     if (previousAppUrl === undefined) delete process.env.APP_URL;
     else process.env.APP_URL = previousAppUrl;
+    if (previousAppEnvironment === undefined) delete process.env.APP_ENV;
+    else process.env.APP_ENV = previousAppEnvironment;
+    if (previousWebhookUrl === undefined)
+      delete process.env.PRIVY_WEBHOOK_PUBLIC_URL;
+    else process.env.PRIVY_WEBHOOK_PUBLIC_URL = previousWebhookUrl;
   }
 });
 
