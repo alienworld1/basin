@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "NODE_OPTIONS=--conditions=react-server tsx --test test/*.test.ts"
+    "test": "NODE_OPTIONS=--conditions=react-server tsx --test test/*.test.ts",
+    "test:settlement": "NODE_OPTIONS=--conditions=react-server tsx --test test/settlement*.test.ts"
   },
   "dependencies": {
     "@basin/db": "workspace:*",
