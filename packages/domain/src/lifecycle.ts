@@ -1,5 +1,25 @@
 export const workspaceTypes = ["PERSONAL", "ORGANIZATION"] as const;
 export const memberRoles = ["ADMIN", "PAYMENT_OPERATOR"] as const;
+export const memberStatuses = ["ACTIVE", "REMOVED", "LEFT"] as const;
+export const invitationStatuses = [
+  "PENDING",
+  "ACCEPTED",
+  "REVOKED",
+  "EXPIRED",
+] as const;
+export const accessEventTypes = [
+  "INVITED",
+  "INVITATION_REVOKED",
+  "INVITATION_EXPIRED",
+  "JOINED",
+  "REINSTATED",
+  "REMOVED",
+  "LEFT",
+] as const;
+export const invitationOperationTypes = [
+  "CREATE_INVITATION",
+  "REPLACE_INVITATION",
+] as const;
 export const identityStatuses = [
   "PENDING",
   "ACTIVE",
