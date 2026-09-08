@@ -1,10 +1,10 @@
 # Basin persistence
 
-`@basin/db` owns the private `basin` Postgres schema and server-only repositories. `@basin/domain` holds database-independent validation and transitions. No product route creates records yet. Supabase is the intended hosted Postgres provider; access uses Postgres directly, without Supabase Auth or its Data API.
+`@basin/db` owns the private `basin` Postgres schema and server-only repositories. `@basin/domain` holds database-independent validation and transitions. Supabase is the intended hosted Postgres provider; access uses Postgres directly, without Supabase Auth or its Data API.
 
 ## Connections and migrations
 
-Set `DATABASE_URL` for runtime queries and `DATABASE_MIGRATION_URL` for an owner/direct or session connection in the repository root `.env`, or export them in your shell. Only `APP_ENV=development` (the default) or `APP_ENV=test` allows migration commands to fall back to `DATABASE_URL`. Database migration, status, and health commands load environment files from the repository root using the existing Next.js environment loader, regardless of pnpm’s package working directory. Exported variables take precedence; root `.env.local` and environment-specific files follow Next.js precedence. The web app still reads `apps/web/.env.local` separately.
+Set `DATABASE_URL` for runtime queries and `DATABASE_MIGRATION_URL` for an owner/direct or session connection in the repository root `.env`, or export them in your shell. Runtime traffic reuses one connection per application process; for serverless deployments, set `DATABASE_URL` to Supabase's transaction pooler URL (port `6543`). `DATABASE_MIGRATION_URL` should remain an owner/direct or session connection. Only `APP_ENV=development` (the default) or `APP_ENV=test` allows migration commands to fall back to `DATABASE_URL`. Database migration, status, and health commands load environment files from the repository root using the existing Next.js environment loader, regardless of pnpm’s package working directory. Exported variables take precedence; root `.env.local` and environment-specific files follow Next.js precedence. The web app still reads `apps/web/.env.local` separately.
 
 ```bash
 pnpm install
@@ -24,7 +24,7 @@ Keep `basin` out of Supabase's exposed schemas. Migrations revoke browser-role a
 psql "$DATABASE_MIGRATION_URL" -v runtime_role=basin_application -f packages/db/scripts/grant-runtime.sql
 ```
 
-The grant file permits reads, inserts, mutable projections, and one-time version closure. It grants no schema creation, history mutation, or deletion. Reapply reviewed grants for newly added tables in later deployments. If hosting forces schema exposure, enable deny-by-default RLS before granting access; this module deliberately uses a private namespace.
+The grant file permits reads, inserts, mutable projections, and one-time version closure. It grants no schema creation, history mutation, or deletion. Reapply reviewed grants for newly added tables in later deployments. If hosting forces schema exposure, enable deny-by-default RLS before granting access; this package deliberately uses a private namespace.
 
 ## Integration tests
 
@@ -51,15 +51,15 @@ The suite covers tenant isolation; concurrent user/member/payment creation; pend
 
 ## Authority and future integration boundaries
 
-All tenant-owned operations require organization scope; workspace reads require user scope. Module 3 must verify sessions and membership before passing scope. Application roles are not chain/Privy authority.
+All tenant-owned operations require organization scope; workspace reads require user scope. Authentication and membership checks must run before passing scope. Application roles are not chain/Privy authority.
 
-The public package exports opaque evidence types, but no evidence constructor. Non-test activation, identity, settlement-version, obligation, execution, and finalization writes reject unregistered evidence at runtime, even if TypeScript is bypassed. Modules 4/5/7/9 will add narrowly reviewed internal producers after real ENS, signature, Privy, and Router verification. A browser payload or a `verified: true` property cannot create proof.
+The public package exports opaque evidence types and narrow identity/settlement evidence constructors for the server services that independently verify chain state. Non-test activation, identity, settlement-version, obligation, execution, and finalization writes reject unregistered evidence at runtime, even if TypeScript is bypassed. Additional evidence producers must be narrowly reviewed and must perform real ENS, signature, Privy, and Router verification. A browser payload or a `verified: true` property cannot create proof.
 
 `createOrResume` generates the economic payment ID once, normalizes and hashes the strict request, acquires its scoped idempotency key, and writes the payment and initial event atomically. All subsequent transitions lock the payment and append one ordered event. Payment requests never accept destinations or caller-selected payment IDs.
 
 Obligation capacity is a cached preflight value. Creating a payment does not reserve/decrement it. Only verified Router projections or confirmed settlement evidence reduce the cache. Finalization records the exact historical before/after amounts; out-of-order confirmed results cannot increase the current cache. The Router owns atomic aggregate-spend enforcement and finality rules.
 
-Settlement destination columns remain null, are rejected on writes, and are omitted from default reads. Module 5 owns encryption/key management. Immutable accepted roots, events, snapshots, and receipts have no update/delete repository operations and are additionally protected by database triggers. Identity/settlement versions and generations allow only one-time closure. No external network call runs inside a database transaction.
+Receiving preferences and operation descriptors use versioned AES-256-GCM envelopes bound to workspace, identity, and operation context. App-authored settlement versions retain protected destination ciphertext; public history omits it. The operation journal enforces one unresolved change per relationship and supports atomic version/confirmation finalization. See [receiving verification](../../docs/receiving-verification.md). Immutable accepted roots, events, snapshots, and receipts have no update/delete repository operations and are additionally protected by database triggers. Identity/settlement versions and generations allow only one-time closure. No external network call runs inside a database transaction.
 
 Dependencies are limited to Drizzle ORM/Kit and drizzle-zod (schema, migrations, validation), pg (Postgres driver), server-only (Next.js boundary), existing Zod/TypeScript, tsx plus Node's built-in test runner, and small maintained EVM checksum/ENSIP-15 utilities in the domain package. No payment, auth, or chain client is introduced.
 

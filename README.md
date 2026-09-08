@@ -56,3 +56,7 @@ The repository is one pnpm workspace. `apps/web` is the only runtime application
 To verify configuration failures locally, temporarily set `APP_URL` or `SEPOLIA_RPC_URL` to a malformed value and run `pnpm build`, then restore the value. To exercise an error boundary, temporarily throw from the relevant page during local verification and revert that change before committing.
 
 Database setup, least-privilege grants, migration review, isolated integration tests, and manual QA are documented in [the persistence guide](packages/db/README.md). Run `pnpm db:check` before deployment; `pnpm start` enforces this check before starting the production server.
+
+## Receiving accounts
+
+Personal workspaces with a verified identity can save a protected receiving account. Configure the reviewed Sepolia asset and server-only encryption key, apply the new migration and runtime grants, then follow [receiving setup and verification](docs/receiving-verification.md). A saved preference does not claim active settlement or relationship approval. Relationship settlement services and isolated ENSv2 verification scripts are included; live approval and payment demonstrations require the later relationship/Router integration.
