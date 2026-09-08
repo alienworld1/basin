@@ -62,7 +62,8 @@ export function WorkspaceApp({
   const [identityDetails, setIdentityDetails] =
     useState<IdentityTechnicalDetails>();
   const [identityPending, setIdentityPending] = useState(false);
-  const [treasuryDetails, setTreasuryDetails] = useState<TreasuryTechnicalDetails>();
+  const [treasuryDetails, setTreasuryDetails] =
+    useState<TreasuryTechnicalDetails>();
   const [treasuryPending, setTreasuryPending] = useState(false);
   const handleIdentityDetails = useCallback(
     (details: IdentityTechnicalDetails | undefined) =>
@@ -82,10 +83,7 @@ export function WorkspaceApp({
     (pending: boolean) => setTreasuryPending(pending),
     [],
   );
-  const handleSessionEnded = useCallback(
-    () => setStatus("session-ended"),
-    [],
-  );
+  const handleSessionEnded = useCallback(() => setStatus("session-ended"), []);
 
   const bootstrap = useCallback(async () => {
     setStatus("loading");
@@ -261,6 +259,12 @@ export function WorkspaceApp({
     return workspace;
   };
 
+  const recoverWorkspaceAccess = async () => {
+    setSelectedOverride(undefined);
+    router.replace("/app");
+    await bootstrap();
+  };
+
   let content: React.ReactNode;
   if (status === "session-ended") {
     content = (
@@ -348,6 +352,7 @@ export function WorkspaceApp({
         onTreasuryDetailsChange={handleTreasuryDetails}
         onTreasuryPendingChange={handleTreasuryPending}
         onSessionEnded={handleSessionEnded}
+        onAccessChanged={recoverWorkspaceAccess}
       />
     );
   }

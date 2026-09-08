@@ -18,6 +18,18 @@ function getWebhookDevOrigin(): string[] {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: getWebhookDevOrigin(),
+  async headers() {
+    return [
+      {
+        source: "/invite/payment-operator/:secret",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

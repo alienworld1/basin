@@ -9,6 +9,7 @@ import type { IdentityTechnicalDetails } from "../../shared/identity-types";
 import { PersonalIdentity } from "../identities/personal-identity";
 import type { TreasuryTechnicalDetails } from "../../shared/treasury-types";
 import { TreasuryControls } from "../treasury/treasury-controls";
+import { PaymentAccess } from "../payment-access/payment-access";
 
 export function ActiveWorkspace({
   workspace,
@@ -18,6 +19,7 @@ export function ActiveWorkspace({
   onTreasuryDetailsChange,
   onTreasuryPendingChange,
   onSessionEnded,
+  onAccessChanged,
 }: {
   workspace: WorkspaceSummary;
   userId: string;
@@ -25,9 +27,12 @@ export function ActiveWorkspace({
     details: IdentityTechnicalDetails | undefined,
   ) => void;
   onPendingChange: (pending: boolean) => void;
-  onTreasuryDetailsChange: (details: TreasuryTechnicalDetails | undefined) => void;
+  onTreasuryDetailsChange: (
+    details: TreasuryTechnicalDetails | undefined,
+  ) => void;
   onTreasuryPendingChange: (pending: boolean) => void;
   onSessionEnded: () => void;
+  onAccessChanged: () => Promise<void>;
 }) {
   const auth = useBasinAuth();
   const [preparing, setPreparing] = useState(false);
@@ -61,7 +66,9 @@ export function ActiveWorkspace({
   if (workspace.type === "organization") {
     return (
       <section className="border-t border-line-strong pt-8">
-        <p className="mb-3 text-sm font-medium text-ink-tertiary">Organization workspace</p>
+        <p className="mb-3 text-sm font-medium text-ink-tertiary">
+          Organization workspace
+        </p>
         <h1
           ref={headingRef}
           tabIndex={-1}
@@ -74,6 +81,12 @@ export function ActiveWorkspace({
           onTechnicalDetailsChange={onTreasuryDetailsChange}
           onPendingChange={onTreasuryPendingChange}
           onSessionEnded={onSessionEnded}
+          onAccessChanged={onAccessChanged}
+        />
+        <PaymentAccess
+          workspace={workspace}
+          onSessionEnded={onSessionEnded}
+          onAccessChanged={onAccessChanged}
         />
       </section>
     );
