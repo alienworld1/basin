@@ -1,8 +1,9 @@
 import { getAddress } from "viem";
 import nextEnv from "@next/env";
+import { fileURLToPath } from "node:url";
 
 const { loadEnvConfig } = nextEnv;
-loadEnvConfig(process.cwd(), true);
+loadEnvConfig(fileURLToPath(new URL("../../../", import.meta.url)), true);
 
 export function readLiveEnvironment() {
   const rpcUrl = process.env.SEPOLIA_RPC_URL?.trim();

@@ -36,3 +36,13 @@ pnpm --filter @basin/ens verify:live alice.basin.eth 0xController
 Registration additionally requires the server-only
 `ENSV2_REGISTRAR_PRIVATE_KEY`. Never use a signer with dangerous namespace root
 roles or identity resolver authority.
+
+## Relationship settlement
+
+`settlement-record.ts` defines Basin V1, not an ENS standard. The descriptor is ordinary ABI encoding of `(uint8 version, uint256 chainId, address asset, address destination, uint256 settlementEpoch, uint256 validFrom)` (192 bytes). Its keccak256 commitment is stored in the relationship's `basin.settlement` record as `(uint8 version, uint256 settlementEpoch, bytes32 commitment)` (96 bytes). Initial epoch is zero; ordinary application changes advance by one. Shared vectors and malformed-input cases are in `test/settlement.test.ts`.
+
+The descriptor itself does not bind a relationship. Its authority depends on the exact resolved relationship generation, recipient permissions, and, for approval continuity, an independently verified Router activation. The adapter checks frozen root/name/wildcard/exact-record permissions, implementation, alias absence, lifecycle, and current versus receipt-block state. It signs nothing.
+
+See [receiving verification](../../docs/receiving-verification.md) for configuration, controller harnesses, authorization-denial checks, and the unavailable integration gates. ENS CLI tools load root environment files or exported variables. Run `pnpm --filter @basin/ens test:settlement` for focused local checks.
+
+Reviewed references: [Permissioned Resolver](https://docs.ens.domains/ensv2/permissioned-resolver/), [Enhanced Access Control](https://docs.ens.domains/ensv2/enhanced-access-control/), and [Permissioned Registry](https://docs.ens.domains/ensv2/permissioned-registry/).

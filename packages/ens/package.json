@@ -5,14 +5,19 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./names": "./src/names.ts"
+    "./names": "./src/names.ts",
+    "./settlement-record": "./src/settlement-record.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "check:deployment": "tsx scripts/check-deployment.ts",
-    "verify:live": "tsx scripts/verify-identity.ts"
+    "verify:live": "tsx scripts/verify-identity.ts",
+    "verify:settlement": "tsx scripts/verify-settlement.ts",
+    "exercise:settlement": "tsx scripts/exercise-settlement.ts",
+    "test:settlement": "tsx --test test/settlement.test.ts",
+    "provision:settlement": "tsx scripts/provision-settlement.ts"
   },
   "dependencies": {
     "@adraffy/ens-normalize": "^1.11.0",
