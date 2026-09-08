@@ -20,10 +20,26 @@ export function noStoreJson(
 
 export function requireSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  const expected = process.env.APP_URL
-    ? new URL(process.env.APP_URL).origin
-    : new URL(request.url).origin;
-  if (origin !== expected) {
+  const expectedOrigins = new Set([
+    process.env.APP_URL
+      ? new URL(process.env.APP_URL).origin
+      : new URL(request.url).origin,
+  ]);
+
+  // In local development the browser and Privy webhook can share a public
+  // tunnel while APP_URL remains localhost. The tunnel is trusted only when it
+  // is explicitly configured and never expands the production origin policy.
+  const webhookUrl = process.env.PRIVY_WEBHOOK_PUBLIC_URL?.trim();
+  const appEnvironment = process.env.APP_ENV?.trim() || "development";
+  if (appEnvironment === "development" && webhookUrl) {
+    try {
+      expectedOrigins.add(new URL(webhookUrl).origin);
+    } catch {
+      // next.config.ts reports malformed tunnel URLs during server startup.
+    }
+  }
+
+  if (!origin || !expectedOrigins.has(origin)) {
     throw new AuthError("FORBIDDEN", "We couldn't verify this request.");
   }
 }
