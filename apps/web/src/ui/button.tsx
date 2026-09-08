@@ -1,4 +1,4 @@
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+type ButtonProps = React.ComponentPropsWithRef<"button">;
 
 export function Button({ className = "", ...props }: ButtonProps) {
   return (

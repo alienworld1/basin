@@ -4,14 +4,24 @@ import { animated, useReducedMotion, useSpring } from "@react-spring/web";
 import { useEffect, useRef, useState } from "react";
 
 import type { ActiveIdentityDto } from "../../shared/identity-types";
+import { Receiving } from "../receiving/receiving";
 import { Button } from "../button";
 
 type IdentityHomeProps = {
   identity: ActiveIdentityDto;
   justVerified: boolean;
+  workspaceId: string;
+  onReceivingChange: (
+    details: import("../../shared/settlement-types").ReceivingStatusDto,
+  ) => void;
 };
 
-export function IdentityHome({ identity, justVerified }: IdentityHomeProps) {
+export function IdentityHome({
+  identity,
+  justVerified,
+  workspaceId,
+  onReceivingChange,
+}: IdentityHomeProps) {
   const reducedMotion = useReducedMotion();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [copied, setCopied] = useState(false);
@@ -47,9 +57,6 @@ export function IdentityHome({ identity, justVerified }: IdentityHomeProps) {
         </h1>
         <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
           <p className="text-sm font-semibold text-state-success">Active</p>
-          <p className="text-sm font-medium text-state-warning">
-            Receiving setup needed
-          </p>
         </div>
       </animated.div>
       <p className="mt-6 max-w-lg text-ink-secondary">
@@ -69,6 +76,11 @@ export function IdentityHome({ identity, justVerified }: IdentityHomeProps) {
           {copied ? "Identity copied" : ""}
         </span>
       </div>
+      <Receiving
+        key={workspaceId}
+        workspaceId={workspaceId}
+        onDetailsChange={onReceivingChange}
+      />
     </section>
   );
 }

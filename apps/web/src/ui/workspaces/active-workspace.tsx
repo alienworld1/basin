@@ -36,8 +36,7 @@ export function ActiveWorkspace({
 
   if (
     workspace.type === "personal" &&
-    !personalIncomplete &&
-    !personalLoading
+    (workspace.identity || (!personalIncomplete && !personalLoading))
   ) {
     return (
       <section className="border-t border-line-strong pt-8">

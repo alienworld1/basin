@@ -380,8 +380,23 @@ export function PersonalIdentity({
     }
   };
 
+  const handleReceiving = useCallback(
+    (receiving: import("../../shared/settlement-types").ReceivingStatusDto) => {
+      if (identity)
+        onIdentityDetailsChange({ ...identity.technical, receiving });
+    },
+    [identity, onIdentityDetailsChange],
+  );
+
   if (phase === "READY" && identity) {
-    return <IdentityHome identity={identity} justVerified={justVerified} />;
+    return (
+      <IdentityHome
+        identity={identity}
+        justVerified={justVerified}
+        workspaceId={workspace.id}
+        onReceivingChange={handleReceiving}
+      />
+    );
   }
   if (phase === "REVIEW" && availability.status === "available") {
     return (

@@ -1,4 +1,5 @@
 export type IdentityTechnicalDetails = {
+  receiving?: import("./settlement-types").ReceivingStatusDto;
   networkName: "Ethereum Sepolia";
   chainId: 11155111;
   name: string;

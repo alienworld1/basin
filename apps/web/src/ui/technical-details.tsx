@@ -1,3 +1,4 @@
+import { ReceivingEvidence } from "./receiving/receiving-evidence";
 import { InspectorSection } from "./inspector-section";
 import type { InspectorDetails } from "./shell-types";
 import { StatusText } from "./status-text";
@@ -44,6 +45,9 @@ export function TechnicalDetails({
       </InspectorSection>
       {identityDetails ? (
         <IdentityTechnicalDetails details={identityDetails} />
+      ) : null}
+      {identityDetails?.receiving ? (
+        <ReceivingEvidence details={identityDetails.receiving} />
       ) : null}
     </>
   );
