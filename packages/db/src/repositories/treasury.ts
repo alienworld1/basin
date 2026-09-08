@@ -24,11 +24,13 @@ export function treasuryRepository(db: Database) {
       return safely(async () => {
         recordId.parse(organizationId);
         return (
-          await db
-            .select()
-            .from(OrganizationTreasury)
-            .where(eq(OrganizationTreasury.organization_id, organizationId))
-        )[0] ?? null;
+          (
+            await db
+              .select()
+              .from(OrganizationTreasury)
+              .where(eq(OrganizationTreasury.organization_id, organizationId))
+          )[0] ?? null
+        );
       });
     },
     adminPrivyUserIds(organizationId: bigint) {
@@ -40,8 +42,12 @@ export function treasuryRepository(db: Database) {
             .innerJoin(User, eq(User.id, OrganizationMember.user_id))
             .where(
               and(
-                eq(OrganizationMember.organization_id, recordId.parse(organizationId)),
+                eq(
+                  OrganizationMember.organization_id,
+                  recordId.parse(organizationId),
+                ),
                 eq(OrganizationMember.role, "ADMIN"),
+                eq(OrganizationMember.status, "ACTIVE"),
               ),
             )
         ).map((row) => row.privyUserId),
@@ -51,7 +57,10 @@ export function treasuryRepository(db: Database) {
       return safely(async () => {
         recordId.parse(workspaceId);
         const [row] = await db
-          .select({ organization: Organization, treasury: OrganizationTreasury })
+          .select({
+            organization: Organization,
+            treasury: OrganizationTreasury,
+          })
           .from(Organization)
           .leftJoin(
             OrganizationTreasury,
@@ -61,13 +70,19 @@ export function treasuryRepository(db: Database) {
         return found(row);
       });
     },
-    saveOrganizationMapping(organizationId: bigint, privyOrganizationId: string) {
+    saveOrganizationMapping(
+      organizationId: bigint,
+      privyOrganizationId: string,
+    ) {
       return safely(async () =>
         found(
           (
             await db
               .update(Organization)
-              .set({ privy_organization_id: privyOrganizationId, updated_at: new Date() })
+              .set({
+                privy_organization_id: privyOrganizationId,
+                updated_at: new Date(),
+              })
               .where(
                 and(
                   eq(Organization.id, recordId.parse(organizationId)),
@@ -129,7 +144,8 @@ export function treasuryRepository(db: Database) {
             )
             .for("update");
           if (existing) {
-            if (existing.request_fingerprint !== requestFingerprint) throw conflict();
+            if (existing.request_fingerprint !== requestFingerprint)
+              throw conflict();
             return existing;
           }
           const [active] = await tx
@@ -146,9 +162,13 @@ export function treasuryRepository(db: Database) {
                 ]),
               ),
             )
-            .orderBy(desc(PrivyProvisioningOperation.updated_at), desc(PrivyProvisioningOperation.id));
+            .orderBy(
+              desc(PrivyProvisioningOperation.updated_at),
+              desc(PrivyProvisioningOperation.id),
+            );
           if (active) {
-            if (active.request_fingerprint !== requestFingerprint) throw conflict();
+            if (active.request_fingerprint !== requestFingerprint)
+              throw conflict();
             return active;
           }
           return found(
@@ -170,9 +190,18 @@ export function treasuryRepository(db: Database) {
                   .from(PrivyProvisioningOperation)
                   .where(
                     and(
-                      eq(PrivyProvisioningOperation.organization_id, organizationId),
-                      eq(PrivyProvisioningOperation.operation_type, operationType),
-                      eq(PrivyProvisioningOperation.idempotency_key, idempotencyKey),
+                      eq(
+                        PrivyProvisioningOperation.organization_id,
+                        organizationId,
+                      ),
+                      eq(
+                        PrivyProvisioningOperation.operation_type,
+                        operationType,
+                      ),
+                      eq(
+                        PrivyProvisioningOperation.idempotency_key,
+                        idempotencyKey,
+                      ),
                     ),
                   )
               )[0],
@@ -180,7 +209,10 @@ export function treasuryRepository(db: Database) {
         }),
       );
     },
-    updateOperation(id: bigint, values: Partial<typeof PrivyProvisioningOperation.$inferInsert>) {
+    updateOperation(
+      id: bigint,
+      values: Partial<typeof PrivyProvisioningOperation.$inferInsert>,
+    ) {
       return safely(async () =>
         found(
           (
@@ -194,34 +226,42 @@ export function treasuryRepository(db: Database) {
       );
     },
     latestOperation(organizationId: bigint) {
-      return safely(async () =>
-        (
-          await db
-            .select()
-            .from(PrivyProvisioningOperation)
-            .where(eq(PrivyProvisioningOperation.organization_id, organizationId))
-            .orderBy(desc(PrivyProvisioningOperation.updated_at), desc(PrivyProvisioningOperation.id))
-        )[0] ?? null,
+      return safely(
+        async () =>
+          (
+            await db
+              .select()
+              .from(PrivyProvisioningOperation)
+              .where(
+                eq(PrivyProvisioningOperation.organization_id, organizationId),
+              )
+              .orderBy(
+                desc(PrivyProvisioningOperation.updated_at),
+                desc(PrivyProvisioningOperation.id),
+              )
+          )[0] ?? null,
       );
     },
     operationByIntent(intentId: string) {
-      return safely(async () =>
-        (
-          await db
-            .select()
-            .from(PrivyProvisioningOperation)
-            .where(eq(PrivyProvisioningOperation.privy_intent_id, intentId))
-        )[0] ?? null,
+      return safely(
+        async () =>
+          (
+            await db
+              .select()
+              .from(PrivyProvisioningOperation)
+              .where(eq(PrivyProvisioningOperation.privy_intent_id, intentId))
+          )[0] ?? null,
       );
     },
     signerSecret(organizationId: bigint) {
-      return safely(async () =>
-        (
-          await db
-            .select()
-            .from(RoutineSignerSecret)
-            .where(eq(RoutineSignerSecret.organization_id, organizationId))
-        )[0] ?? null,
+      return safely(
+        async () =>
+          (
+            await db
+              .select()
+              .from(RoutineSignerSecret)
+              .where(eq(RoutineSignerSecret.organization_id, organizationId))
+          )[0] ?? null,
       );
     },
     saveSignerSecret(values: typeof RoutineSignerSecret.$inferInsert) {
@@ -229,12 +269,17 @@ export function treasuryRepository(db: Database) {
         const [existing] = await db
           .select()
           .from(RoutineSignerSecret)
-          .where(eq(RoutineSignerSecret.organization_id, values.organization_id));
+          .where(
+            eq(RoutineSignerSecret.organization_id, values.organization_id),
+          );
         if (existing) {
-          if (existing.public_key_fingerprint !== values.public_key_fingerprint) throw conflict();
+          if (existing.public_key_fingerprint !== values.public_key_fingerprint)
+            throw conflict();
           return existing;
         }
-        return found((await db.insert(RoutineSignerSecret).values(values).returning())[0]);
+        return found(
+          (await db.insert(RoutineSignerSecret).values(values).returning())[0],
+        );
       });
     },
     receiveWebhook(values: typeof PrivyWebhookReceipt.$inferInsert) {
@@ -257,7 +302,10 @@ export function treasuryRepository(db: Database) {
         return { receipt: existing, duplicate: true };
       });
     },
-    updateWebhook(id: bigint, values: Partial<typeof PrivyWebhookReceipt.$inferInsert>) {
+    updateWebhook(
+      id: bigint,
+      values: Partial<typeof PrivyWebhookReceipt.$inferInsert>,
+    ) {
       return safely(async () =>
         found(
           (

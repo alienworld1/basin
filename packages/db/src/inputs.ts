@@ -51,7 +51,15 @@ export const organizationMemberInput = createInsertSchema(
     updated_at: z.date().optional(),
   },
 )
-  .omit({ created_at: true, updated_at: true })
+  .omit({
+    status: true,
+    activated_at: true,
+    removed_at: true,
+    removed_by_user_id: true,
+    left_at: true,
+    created_at: true,
+    updated_at: true,
+  })
   .strict();
 
 export const basinIdentityInput = createInsertSchema(t.BasinIdentity, {

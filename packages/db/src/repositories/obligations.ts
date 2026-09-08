@@ -129,6 +129,7 @@ export function obligationRepository(db: Database) {
                     and(
                       eq(OrganizationMember.id, values.created_by_member_id),
                       eq(OrganizationMember.organization_id, organizationId),
+                      eq(OrganizationMember.status, "ACTIVE"),
                     ),
                   )
               )[0],

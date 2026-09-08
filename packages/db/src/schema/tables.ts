@@ -3,6 +3,7 @@ export * from "./user";
 export * from "./workspace";
 export * from "./organization";
 export * from "./organization-member";
+export * from "./organization-invitation";
 export * from "./basin-identity";
 export * from "./identity-authority-version";
 export * from "./approved-payee";

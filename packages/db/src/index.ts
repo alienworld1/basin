@@ -8,6 +8,7 @@ import { obligationRepository } from "./repositories/obligations";
 import { paymentRepository } from "./repositories/payments";
 import { receiptRepository } from "./repositories/receipts";
 import { treasuryRepository } from "./repositories/treasury";
+import { paymentAccessRepository } from "./repositories/payment-access";
 export { databaseHealth } from "./health";
 export type { DatabaseHealth } from "./health";
 export type * from "./evidence";
@@ -27,6 +28,7 @@ export function createPersistence(connectionString: string) {
     payments: paymentRepository(connection.db),
     receipts: receiptRepository(connection.db),
     treasury: treasuryRepository(connection.db),
+    paymentAccess: paymentAccessRepository(connection.db),
     close: connection.close,
   };
 }

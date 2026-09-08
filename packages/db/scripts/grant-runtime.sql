@@ -8,7 +8,8 @@ GRANT UPDATE ON basin."user", basin.workspace, basin.organization, basin.organiz
   basin.basin_identity, basin.approved_payee, basin.obligation, basin.payment,
   basin.idempotency_key, basin.receiving_preference, basin.settlement_operation,
   basin.organization_treasury, basin.privy_provisioning_operation,
-  basin.privy_webhook_receipt, basin.routine_signer_secret TO :"runtime_role";
+  basin.privy_webhook_receipt, basin.routine_signer_secret,
+  basin.organization_invitation TO :"runtime_role";
 GRANT UPDATE (superseded_at) ON basin.identity_authority_version, basin.settlement_version TO :"runtime_role";
 GRANT UPDATE (ended_at, end_reason) ON basin.approved_payee_generation TO :"runtime_role";
 GRANT USAGE ON SCHEMA drizzle TO :"runtime_role";

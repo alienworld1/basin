@@ -2,6 +2,10 @@ import { bigint, numeric, pgSchema, timestamp } from "drizzle-orm/pg-core";
 import {
   workspaceTypes,
   memberRoles,
+  memberStatuses,
+  invitationStatuses,
+  accessEventTypes,
+  invitationOperationTypes,
   identityStatuses,
   payeeStatuses,
   obligationStatuses,
@@ -19,6 +23,19 @@ export const uint = () => numeric({ precision: 78, scale: 0 });
 export const time = () => timestamp({ withTimezone: true, mode: "date" });
 export const workspaceType = basin.enum("workspace_type", workspaceTypes);
 export const memberRole = basin.enum("member_role", memberRoles);
+export const memberStatus = basin.enum("member_status", memberStatuses);
+export const invitationStatus = basin.enum(
+  "organization_invitation_status",
+  invitationStatuses,
+);
+export const accessEventType = basin.enum(
+  "organization_access_event_type",
+  accessEventTypes,
+);
+export const invitationOperationType = basin.enum(
+  "invitation_operation_type",
+  invitationOperationTypes,
+);
 export const identityStatus = basin.enum("identity_status", identityStatuses);
 export const payeeStatus = basin.enum("payee_status", payeeStatuses);
 export const obligationStatus = basin.enum(

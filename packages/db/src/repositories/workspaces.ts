@@ -110,6 +110,7 @@ export function workspaceRepository(db: Database) {
             and(
               eq(OrganizationMember.organization_id, Organization.id),
               eq(OrganizationMember.user_id, userId),
+              eq(OrganizationMember.status, "ACTIVE"),
             ),
           )
           .leftJoin(BasinIdentity, eq(BasinIdentity.workspace_id, Workspace.id))
@@ -168,6 +169,7 @@ export function workspaceRepository(db: Database) {
             and(
               eq(OrganizationMember.organization_id, Organization.id),
               eq(OrganizationMember.user_id, userId),
+              eq(OrganizationMember.status, "ACTIVE"),
             ),
           )
           .where(
@@ -202,6 +204,7 @@ export function workspaceRepository(db: Database) {
             and(
               eq(OrganizationMember.organization_id, Organization.id),
               eq(OrganizationMember.user_id, userId),
+              eq(OrganizationMember.status, "ACTIVE"),
             ),
           )
           .where(
@@ -303,6 +306,7 @@ export function workspaceRepository(db: Database) {
                 and(
                   eq(OrganizationMember.organization_id, organizationId),
                   eq(OrganizationMember.user_id, userId),
+                  eq(OrganizationMember.status, "ACTIVE"),
                 ),
               )
           )[0],
