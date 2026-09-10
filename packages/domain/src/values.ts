@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getAddress } from "@ethersproject/address";
 import { ens_normalize as normalize } from "@adraffy/ens-normalize";
+import { DomainError } from "./lifecycle";
 
 export const limits = {
   displayName: 120,
@@ -70,6 +71,43 @@ export const externalReference = z
   .string()
   .trim()
   .max(limits.externalReference);
+
+const usdcDecimalPattern = /^\d+(?:\.\d{1,6})?$/;
+
+export function parseUsdcAmount(value: string) {
+  if (!usdcDecimalPattern.test(value)) {
+    throw new DomainError(
+      "INVALID_INPUT",
+      "Enter a valid USDC amount with up to 6 decimal places.",
+    );
+  }
+  const [whole, fraction = ""] = value.split(".");
+  const baseUnits =
+    BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0"));
+  if (baseUnits === 0n) {
+    throw new DomainError(
+      "INVALID_INPUT",
+      "Enter an amount greater than zero.",
+    );
+  }
+  if (baseUnits > BigInt("9".repeat(78))) {
+    throw new DomainError(
+      "INVALID_INPUT",
+      "Enter a valid USDC amount with up to 6 decimal places.",
+    );
+  }
+  return baseUnits.toString();
+}
+
+export function formatUsdcBaseUnits(value: string) {
+  const units = BigInt(value);
+  const whole = units / 1_000_000n;
+  const fraction = (units % 1_000_000n)
+    .toString()
+    .padStart(6, "0")
+    .replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}
 export const databaseUrl = z
   .string({ error: "Set a valid database connection." })
   .refine((value) => {

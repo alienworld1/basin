@@ -40,6 +40,21 @@ export const obligationStatuses = [
   "CANCELLED",
   "EXPIRED",
 ] as const;
+export const expectedPaymentStatuses = [
+  "EXPECTED",
+  "READY",
+  "PROCESSING",
+  "SATISFIED",
+  "ATTENTION",
+  "CANCELLED",
+] as const;
+export const expectedPaymentReasonCodes = [
+  "RELATIONSHIP_CHANGED",
+  "RELATIONSHIP_INACTIVE",
+  "AUTHORIZATION_UNAVAILABLE",
+  "OBLIGATION_UNAVAILABLE",
+  "PAYMENT_FAILED",
+] as const;
 export const paymentStatuses = [
   "DRAFT",
   "VALIDATING_AUTHORITY",
@@ -75,6 +90,9 @@ export const idempotencyStatuses = [
 export type PaymentStatus = (typeof paymentStatuses)[number];
 export type PayeeStatus = (typeof payeeStatuses)[number];
 export type ObligationStatus = (typeof obligationStatuses)[number];
+export type ExpectedPaymentStatus = (typeof expectedPaymentStatuses)[number];
+export type ExpectedPaymentReasonCode =
+  (typeof expectedPaymentReasonCodes)[number];
 export type ErrorCode =
   | "NOT_FOUND"
   | "CONFLICT"
@@ -144,4 +162,28 @@ export function assertPayeeTransition(from: PayeeStatus, to: PayeeStatus) {
         ? ["EXPIRED", "REVOKED", "REAPPROVAL_REQUIRED"]
         : [];
   if (!allowed.includes(to)) throw new DomainError("INVALID_TRANSITION");
+}
+
+const expectedPaymentTransitions: Record<
+  ExpectedPaymentStatus,
+  readonly ExpectedPaymentStatus[]
+> = {
+  EXPECTED: ["READY", "ATTENTION", "CANCELLED"],
+  READY: ["PROCESSING", "ATTENTION"],
+  PROCESSING: ["SATISFIED", "ATTENTION"],
+  ATTENTION: ["READY", "PROCESSING"],
+  SATISFIED: [],
+  CANCELLED: [],
+};
+
+export function assertExpectedPaymentTransition(
+  from: ExpectedPaymentStatus,
+  to: ExpectedPaymentStatus,
+) {
+  if (!expectedPaymentTransitions[from].includes(to)) {
+    throw new DomainError(
+      "INVALID_TRANSITION",
+      "This expected payment has changed. Refresh and review it.",
+    );
+  }
 }
