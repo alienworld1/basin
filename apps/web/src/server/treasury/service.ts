@@ -6,6 +6,7 @@ import { address } from "@basin/domain";
 import type { TreasuryStatusResponse } from "../../shared/treasury-types";
 import {
   createPrivyTreasuryAdapter,
+  TreasuryAuthorizationRequired,
   TreasuryProviderError,
   type PrivyTreasuryAdapter,
   type WalletEvidence,
@@ -22,6 +23,7 @@ import {
   policyFingerprint,
 } from "./policy";
 import { readTreasuryBalance, type TreasuryBalance } from "./balance";
+import { verifiedBasinRouter } from "../config/verified-basin-router";
 
 type Persistence = ReturnType<typeof createPersistence>;
 type Access = Awaited<
@@ -216,6 +218,9 @@ export function createTreasuryService(
         throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
       let expectedPolicyFingerprint: string | undefined;
       if (treasury.routine_policy_id) {
+        // A routine policy is only meaningful while it targets the reviewed,
+        // immutable Router deployment. Do this before restoring READY.
+        if (!providedAdapter) await verifiedBasinRouter();
         const policy = await adapter().getPolicy(
           treasury.routine_policy_id,
           observedPolicyFingerprint,
@@ -227,6 +232,28 @@ export function createTreasuryService(
         )
           throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
         expectedPolicyFingerprint = policy.fingerprint;
+      }
+      const policyAwaitingAttachment = Boolean(
+        treasury.routine_policy_id &&
+          wallet.chainType === "ethereum" &&
+          wallet.ownerId === owner.id &&
+          wallet.entityId === context.organization.privy_organization_id &&
+          wallet.policyIds.length === 0 &&
+          wallet.additionalSigners.length === 1 &&
+          wallet.additionalSigners[0].signerId === signer.id &&
+          wallet.additionalSigners[0].policyIds.length === 0,
+      );
+      if (policyAwaitingAttachment) {
+        await persistence.treasury.saveTreasury({
+          organization_id: organizationId,
+          status: "CONTROL_READY",
+          wallet_address: address.parse(wallet.address),
+          chain_type: "ethereum",
+          owner_quorum_threshold: 1,
+          last_verified_at: new Date(),
+          last_error_code: null,
+        });
+        return state();
       }
       const walletAddress = validateWallet(
         wallet,
@@ -261,7 +288,14 @@ export function createTreasuryService(
     return state();
   }
 
-  async function setup(idempotencyKey: string) {
+  async function setup(input: string | {
+    idempotencyKey: string;
+    authorizationSignature?: string;
+    requestExpiry?: number;
+  }) {
+    const request = typeof input === "string"
+      ? { idempotencyKey: input }
+      : input;
     const config = treasuryConfiguration();
     const requestFingerprint = digest({
       organizationId: organizationId.toString(),
@@ -271,10 +305,32 @@ export function createTreasuryService(
     const operation = await persistence.treasury.operation(
       organizationId,
       "PROVISION_TREASURY",
-      idempotencyKey,
+      request.idempotencyKey,
       requestFingerprint,
     );
-    if (operation.status === "COMPLETED") return reconcile();
+    const context = await persistence.treasury.byWorkspace(access.workspace.id);
+    const needsRouterPolicyUpgrade = Boolean(
+      config.router &&
+        (!context.treasury?.routine_policy_id ||
+          !context.treasury.routine_policy_fingerprint ||
+          !context.treasury.router_address ||
+          !context.treasury.router_version ||
+          !context.treasury.routine_per_tx_limit_base_units),
+    );
+
+    // Organizations set up before Router controls were introduced have a
+    // completed provisioning operation but lack the bounded routine policy.
+    // Treat that record as resumable: its wallet, owner quorum, and signer are
+    // reused, and only the missing Router-policy work is performed.
+    if (operation.status === "COMPLETED" && !needsRouterPolicyUpgrade)
+      return reconcile();
+    if (operation.status === "COMPLETED" && needsRouterPolicyUpgrade) {
+      await persistence.treasury.updateOperation(operation.id, {
+        step: "ROUTINE_SIGNER_VERIFIED",
+        status: "IN_PROGRESS",
+        safe_error_code: null,
+      });
+    }
     if (operation.status === "AWAITING_APPROVAL" && operation.privy_intent_id) {
       const intent = await adapter().getIntent(operation.privy_intent_id);
       if (intent.status === "pending") return state();
@@ -298,7 +354,6 @@ export function createTreasuryService(
       });
     }
     const providerKey = operation.idempotency_key;
-    const context = await persistence.treasury.byWorkspace(access.workspace.id);
     let treasury = context.treasury;
     await persistence.treasury.saveTreasury({
       organization_id: organizationId,
@@ -483,24 +538,13 @@ export function createTreasuryService(
         verifiedWallet.additionalSigners[0].signerId === signerId &&
         verifiedWallet.additionalSigners[0].policyIds.length === 0
       ) {
-        const intent = await adapter().createWalletUpdateIntent({
+        await adapter().attachRoutinePolicy({
           walletId,
           routineSignerId: signerId,
           routinePolicyId,
-          idempotencyKey: `${providerKey}-attach-policy`,
+          authorizationSignature: request.authorizationSignature,
+          requestExpiry: request.requestExpiry,
         });
-        if (intent.status !== "executed") {
-          await persistence.treasury.updateOperation(operation.id, {
-            status: "AWAITING_APPROVAL",
-            privy_intent_id: intent.id,
-            expires_at: intent.expiresAt,
-          });
-          await persistence.treasury.saveTreasury({
-            organization_id: organizationId,
-            status: "AWAITING_APPROVAL",
-          });
-          return state();
-        }
         verifiedWallet = await adapter().getWallet(walletId);
       }
       const walletAddress = validateWallet(
@@ -538,6 +582,17 @@ export function createTreasuryService(
         safe_error_code: null,
       });
     } catch (error) {
+      if (error instanceof TreasuryAuthorizationRequired) {
+        await persistence.treasury.saveTreasury({
+          organization_id: organizationId,
+          status: "PROVISIONING",
+          last_error_code: null,
+        });
+        return {
+          ...(await state()),
+          walletAuthorization: error.authorization,
+        };
+      }
       const code =
         error instanceof TreasuryProviderError
           ? error.code

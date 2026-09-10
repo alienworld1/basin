@@ -42,13 +42,13 @@ export type HighAuthorityAuthorizationRequest = {
   requestExpiry: number;
   request: {
     version: 1;
-    method: "POST";
+    method: "POST" | "PATCH";
     url: string;
     body: Record<string, unknown>;
     headers: {
       "privy-app-id": string;
-      "privy-idempotency-key": string;
-      "privy-request-expiry": string;
+      "privy-idempotency-key"?: string;
+      "privy-request-expiry"?: string;
     };
   };
 };
@@ -146,12 +146,13 @@ export interface PrivyTreasuryAdapter {
     idempotencyKey: string;
   }): Promise<WalletEvidence>;
   getWallet(id: string): Promise<WalletEvidence>;
-  createWalletUpdateIntent(input: {
+  attachRoutinePolicy(input: {
     walletId: string;
     routineSignerId: string;
     routinePolicyId: string;
-    idempotencyKey: string;
-  }): Promise<IntentEvidence>;
+    authorizationSignature?: string;
+    requestExpiry?: number;
+  }): Promise<WalletEvidence>;
   getIntent(id: string): Promise<IntentEvidence>;
   sendHighAuthorityTransaction?(input: {
     walletId: string;
@@ -361,41 +362,43 @@ export function createPrivyTreasuryAdapter(): PrivyTreasuryAdapter {
         rethrow(error);
       }
     },
-    async createWalletUpdateIntent(input) {
-      try {
-        for await (const existing of client.intents().list({
-          resource_id: input.walletId,
-          sort_by: "updated_at_desc",
-        })) {
-          if (
-            existing.intent_type === "WALLET" &&
-            ["pending", "processing"].includes(existing.status) &&
-            existing.request_details.body.additional_signers?.some(
-              (signer) =>
-                signer.signer_id === input.routineSignerId &&
-                signer.override_policy_ids?.[0] === input.routinePolicyId,
-            )
-          ) {
-            return {
-              id: existing.intent_id,
-              status: "pending",
-              expiresAt: new Date(existing.expires_at),
-            };
-          }
-        }
-        const value = await client.intents().updateWallet(input.walletId, {
-          additional_signers: [
-            {
-              signer_id: input.routineSignerId,
-              override_policy_ids: [input.routinePolicyId],
+    async attachRoutinePolicy(input) {
+      const additionalSigners = [
+        {
+          signer_id: input.routineSignerId,
+          override_policy_ids: [input.routinePolicyId],
+        },
+      ];
+      const requestExpiry = Date.now() + 15 * 60 * 1000;
+      const apiUrl = (
+        process.env.PRIVY_API_BASE_URL ?? "https://api.privy.io"
+      ).replace(/\/$/, "");
+      if (!input.authorizationSignature) {
+        throw new TreasuryAuthorizationRequired({
+          requestExpiry,
+          request: {
+            version: 1,
+            method: "PATCH",
+            url: `${apiUrl}/v1/wallets/${encodeURIComponent(input.walletId)}`,
+            body: { additional_signers: additionalSigners },
+            headers: {
+              "privy-app-id": appId,
+              "privy-request-expiry": String(requestExpiry),
             },
-          ],
+          },
         });
-        return {
-          id: value.intent_id,
-          status: value.status === "processing" ? "pending" : value.status,
-          expiresAt: new Date(value.expires_at),
-        };
+      }
+      if (!input.requestExpiry || input.requestExpiry <= Date.now()) {
+        throw new TreasuryProviderError("AUTHORIZATION_REQUIRED");
+      }
+      try {
+        return mapWallet(await client.wallets().update(input.walletId, {
+          additional_signers: additionalSigners,
+          authorization_context: {
+            signatures: [input.authorizationSignature],
+          },
+          request_expiry: input.requestExpiry,
+        }));
       } catch (error) {
         rethrow(error);
       }

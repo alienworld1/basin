@@ -10,7 +10,7 @@ import type {
 import type { PrivyTreasuryAdapter } from "../src/server/treasury/adapter";
 import { createTreasuryService } from "../src/server/treasury/service";
 import { generateRoutineKey, unsealRoutineKey } from "../src/server/treasury/protection";
-import { buildRoutinePolicy, policyFingerprint } from "../src/server/treasury/policy";
+import { buildRoutinePolicy, observedPolicyFingerprint, policyFingerprint } from "../src/server/treasury/policy";
 
 type Persistence = ReturnType<typeof createPersistence>;
 const now = new Date();
@@ -42,6 +42,7 @@ function harness() {
   const calls = { owner: 0, organization: 0, signer: 0, wallet: 0 };
   const quorums = new Map<string, { id: string; threshold: number; userIds: string[]; publicKeys: string[] }>();
   let wallet: Awaited<ReturnType<PrivyTreasuryAdapter["getWallet"]>> | undefined;
+  let policyDefinition: Parameters<PrivyTreasuryAdapter["createPolicy"]>[0]["definition"] | undefined;
   const adapter: PrivyTreasuryAdapter = {
     async createOwnerQuorum({ userId }) {
       calls.owner++;
@@ -61,23 +62,34 @@ function harness() {
       quorums.set(value.id, value);
       return value;
     },
-    async createPolicy() { throw new Error("not configured"); },
-    async getPolicy() { throw new Error("not configured"); },
-    async createWallet({ organizationId, ownerId, routineSignerId }) {
+    async createPolicy({ definition }) {
+      policyDefinition = definition;
+      return { id: "policy-routine", ownerId: definition.owner_id, fingerprint: "" };
+    },
+    async getPolicy(_id, expectedFingerprint) {
+      return { id: "policy-routine", ownerId: "quorum-owner", fingerprint: expectedFingerprint(policyDefinition as never) };
+    },
+    async createWallet({ organizationId, ownerId, routineSignerId, routinePolicyId }) {
       calls.wallet++;
       wallet = {
         id: "wallet-privy",
         address: "0x1111111111111111111111111111111111111111",
         chainType: "ethereum",
         ownerId,
-        additionalSigners: [{ signerId: routineSignerId, policyIds: [] }],
+        additionalSigners: [{ signerId: routineSignerId, policyIds: routinePolicyId ? [routinePolicyId] : [] }],
         policyIds: [],
         entityId: organizationId,
       };
       return wallet;
     },
     async getWallet() { return wallet!; },
-    async createWalletUpdateIntent() { throw new Error("not configured"); },
+    async attachRoutinePolicy({ routinePolicyId, routineSignerId }) {
+      wallet = {
+        ...wallet!,
+        additionalSigners: [{ signerId: routineSignerId, policyIds: [routinePolicyId] }],
+      };
+      return wallet!;
+    },
     async getIntent() { throw new Error("not configured"); },
   };
   const repository = {
@@ -141,7 +153,30 @@ function harness() {
     },
   };
   const persistence = { treasury: repository } as unknown as Persistence;
-  return { persistence, adapter, calls, treasury: () => treasury, secret: () => secret };
+  return {
+    persistence,
+    adapter,
+    calls,
+    treasury: () => treasury,
+    secret: () => secret,
+    markLegacyControlsComplete() {
+      treasury = {
+        ...treasury!,
+        status: "CONTROL_READY",
+        routine_policy_id: null,
+        routine_policy_owner_id: null,
+        routine_policy_fingerprint: null,
+        router_address: null,
+        router_version: null,
+        routine_per_tx_limit_base_units: null,
+      };
+      wallet = {
+        ...wallet!,
+        additionalSigners: [{ signerId: "quorum-routine", policyIds: [] }],
+      };
+      operation = { ...operation!, step: "COMPLETE", status: "COMPLETED" };
+    },
+  };
 }
 
 test("provisions one verified organization control boundary and resumes without duplicates", async () => {
@@ -150,13 +185,29 @@ test("provisions one verified organization control boundary and resumes without 
   const h = harness();
   const service = createTreasuryService(h.persistence, access as never, "did:privy:admin", h.adapter);
   const first = await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
-  assert.equal(first.summary.status, "CONTROL_READY");
-  assert.equal(first.summary.routerConfigured, false);
+  assert.equal(first.summary.status, "READY");
+  assert.equal(first.summary.routerConfigured, true);
   assert.equal(first.technical.walletAddress, "0x1111111111111111111111111111111111111111");
-  assert.equal(h.treasury()?.routine_policy_id, null);
+  assert.equal(h.treasury()?.routine_policy_id, "policy-routine");
   assert.deepEqual(h.calls, { owner: 1, organization: 1, signer: 1, wallet: 1 });
   const refreshed = await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
-  assert.equal(refreshed.summary.status, "CONTROL_READY");
+  assert.equal(refreshed.summary.status, "READY");
+  assert.deepEqual(h.calls, { owner: 1, organization: 1, signer: 1, wallet: 1 });
+});
+
+test("completed legacy controls resume by adding the Router policy", async () => {
+  process.env.TREASURY_ROUTINE_KEY_ENCRYPTION_KEY = "11".repeat(32);
+  process.env.TREASURY_ROUTINE_KEY_VERSION = "test-v1";
+  const h = harness();
+  const service = createTreasuryService(h.persistence, access as never, "did:privy:admin", h.adapter);
+  await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
+  h.markLegacyControlsComplete();
+
+  const resumed = await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
+
+  assert.equal(resumed.summary.status, "READY");
+  assert.equal(h.treasury()?.routine_policy_id, "policy-routine");
+  assert.equal(h.treasury()?.router_address, "0x38be3a868778df3fc6e37c25ebc4cf29f81077b2");
   assert.deepEqual(h.calls, { owner: 1, organization: 1, signer: 1, wallet: 1 });
 });
 
@@ -208,4 +259,16 @@ test("routine policy is one exact default-deny Basin execution rule", () => {
     ],
   );
   assert.match(policyFingerprint(policy), /^0x[0-9a-f]{64}$/);
+  const returnedByPrivy = {
+    ...policy,
+    rules: policy.rules.map((rule) => ({
+      ...rule,
+      conditions: rule.conditions.map((condition) =>
+        condition.field === "to"
+          ? { ...condition, value: "0x2222222222222222222222222222222222222222".toUpperCase() }
+          : condition,
+      ),
+    })),
+  };
+  assert.equal(observedPolicyFingerprint(returnedByPrivy as never), policyFingerprint(policy));
 });

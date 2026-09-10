@@ -21,6 +21,7 @@
     "@privy-io/node": "^0.34.0",
     "@privy-io/react-auth": "^3.40.0",
     "@react-spring/web": "^10.0.3",
+    "canonicalize": "^2.1.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",

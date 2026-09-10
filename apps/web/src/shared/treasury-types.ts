@@ -48,4 +48,18 @@ export type TreasuryTechnicalDetails = {
 export type TreasuryStatusResponse = {
   summary: TreasurySummary;
   technical: TreasuryTechnicalDetails;
+  walletAuthorization?: {
+    request: {
+      version: 1;
+      method: "POST" | "PATCH";
+      url: string;
+      body: unknown;
+      headers: {
+        "privy-app-id": string;
+        "privy-idempotency-key"?: string;
+        "privy-request-expiry"?: string;
+      };
+    };
+    requestExpiry: number;
+  };
 };

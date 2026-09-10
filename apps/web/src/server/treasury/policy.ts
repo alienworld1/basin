@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { Policy } from "@privy-io/node";
+import canonicalize from "canonicalize";
 
 export type ReviewedRouterAbi = Extract<
   Policy["rules"][number]["conditions"][number],
@@ -59,10 +60,22 @@ export function buildRoutinePolicy(input: {
 }
 
 export function policyFingerprint(definition: RoutinePolicyDefinition) {
-  return `0x${createHash("sha256").update(JSON.stringify(definition)).digest("hex")}`;
+  const serialized = canonicalize(definition);
+  if (!serialized) throw new Error("Payment controls could not be verified.");
+  return `0x${createHash("sha256").update(serialized).digest("hex")}`;
 }
 
 export function observedPolicyFingerprint(policy: Policy) {
+  const conditions = (rule: Policy["rules"][number]) =>
+    rule.conditions.map((condition) => ({
+      ...condition,
+      // Privy preserves the checksum casing supplied during policy creation,
+      // while the reviewed definition canonicalizes EVM destinations. Compare
+      // addresses by value rather than provider presentation.
+      ...(condition.field === "to" && typeof condition.value === "string"
+        ? { value: condition.value.toLowerCase() }
+        : {}),
+    }));
   return policyFingerprint({
     chain_type: policy.chain_type as "ethereum",
     name: policy.name,
@@ -72,7 +85,7 @@ export function observedPolicyFingerprint(policy: Policy) {
       name: rule.name,
       method: rule.method as "eth_sendTransaction",
       action: rule.action as "ALLOW",
-      conditions: rule.conditions,
+      conditions: conditions(rule) as Policy["rules"][number]["conditions"],
     })),
   });
 }

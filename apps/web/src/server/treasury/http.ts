@@ -39,7 +39,11 @@ export async function treasuryHandler(
       kind === "status" ? ["ADMIN", "PAYMENT_OPERATOR"] : ["ADMIN"],
     );
     const service = createTreasuryService(persistence, access, principal.privyUserId);
-    if (kind === "setup") return noStoreJson(await service.setup(input.idempotencyKey));
+    if (kind === "setup") return noStoreJson(await service.setup({
+      idempotencyKey: input.idempotencyKey,
+      authorizationSignature: input.walletAuthorizationSignature,
+      requestExpiry: input.walletAuthorizationExpiry,
+    }));
     if (kind === "reconcile") return noStoreJson(await service.reconcile());
     const current = await service.state();
     return noStoreJson(
