@@ -14,7 +14,7 @@ import {
   type SettlementDescriptorV1,
 } from "../src/settlement-record";
 import { verifyRelationshipPermissionProfile } from "../src/settlement";
-import { ROLE_SET_DATA } from "../src/roles";
+import { ROLE_SET_DATA, ROLE_SET_PARENT } from "../src/roles";
 
 const descriptor: SettlementDescriptorV1 = {
   version: 1,
@@ -110,6 +110,12 @@ const profile = {
 };
 test("relationship profile permits payer lifecycle but rejects broader powers and admins", () => {
   assert.doesNotThrow(() => verifyRelationshipPermissionProfile(profile));
+  assert.doesNotThrow(() =>
+    verifyRelationshipPermissionProfile({
+      ...profile,
+      parentRootCounts: profile.parentRootCounts | ROLE_SET_PARENT,
+    }),
+  );
   for (let i = 0; i < 3; i++) {
     const counts = [...profile.counts];
     counts[i] = ROLE_SET_DATA;
@@ -140,6 +146,12 @@ test("relationship profile permits payer lifecycle but rejects broader powers an
     verifyRelationshipPermissionProfile({
       ...profile,
       parentCounts: 1n << 20n,
+    }),
+  );
+  assert.throws(() =>
+    verifyRelationshipPermissionProfile({
+      ...profile,
+      parentRootCounts: profile.parentRootCounts | (ROLE_SET_PARENT << 128n),
     }),
   );
 });

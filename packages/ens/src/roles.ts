@@ -8,6 +8,7 @@ import {
 import { packetToBytes } from "viem/ens";
 
 export const ROLE_REGISTRAR = 1n << 0n;
+export const ROLE_SET_PARENT = 1n << 8n;
 export const ROLE_UNREGISTER = 1n << 12n;
 export const ROLE_SET_SUBREGISTRY = 1n << 20n;
 export const ROLE_SET_RESOLVER = 1n << 24n;

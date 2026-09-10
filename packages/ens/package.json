@@ -17,9 +17,11 @@
     "verify:settlement": "tsx scripts/verify-settlement.ts",
     "exercise:settlement": "tsx scripts/exercise-settlement.ts",
     "test:settlement": "tsx --test test/settlement.test.ts",
-    "provision:settlement": "tsx scripts/provision-settlement.ts"
+    "provision:settlement": "tsx scripts/provision-settlement.ts",
+    "verify:relationship": "tsx scripts/verify-relationship.ts"
   },
   "dependencies": {
+    "@basin/contracts": "workspace:*",
     "@adraffy/ens-normalize": "^1.11.0",
     "viem": "^2.56.0"
   },

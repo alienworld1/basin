@@ -8,3 +8,6 @@ export * from "./adapter";
 export * from "./settlement-record";
 export * from "./settlement-errors";
 export * from "./settlement";
+export * from "./relationships";
+export * from "./relationship-provisioning";
+export * from "./organization";

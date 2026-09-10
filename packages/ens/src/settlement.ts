@@ -25,6 +25,7 @@ import {
   dnsEncodeName,
   resolverDataResource,
   resolverNameResource,
+  ROLE_SET_PARENT,
   ROLE_SET_DATA,
   roleCountMask,
 } from "./roles";
@@ -547,8 +548,11 @@ export function verifyRelationshipPermissionProfile(value: {
       value.nameCounts === 0n &&
       value.controllerRegistryRoot === 0n,
   );
+  // The Basin registry's regular SET_PARENT role only maintains its canonical
+  // parent declaration. The root -> eth -> basin pointers are read and checked
+  // independently above. Its admin role remains forbidden here.
   const upstreamAllowed = roleCountMask(
-    (1n << 0n) | (1n << 16n) | (1n << 128n) | (1n << 144n),
+    (1n << 0n) | ROLE_SET_PARENT | (1n << 16n) | (1n << 128n) | (1n << 144n),
   );
   requireSettlement(
     (value.parentRootCounts & ~upstreamAllowed) === 0n &&
