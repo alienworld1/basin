@@ -11,6 +11,7 @@ import { treasuryRepository } from "./repositories/treasury";
 import { paymentAccessRepository } from "./repositories/payment-access";
 import { approvedPayeeRepository } from "./repositories/approved-payees";
 import { expectedPaymentRepository } from "./repositories/expected-payments";
+import { paymentAuthorizationRepository } from "./repositories/payment-authorizations";
 export { databaseHealth } from "./health";
 export type { DatabaseHealth } from "./health";
 export type * from "./evidence";
@@ -20,6 +21,7 @@ export {
   attestGeneration,
   attestActivation,
   attestRelationshipEnd,
+  attestObligation,
 } from "./evidence-registry";
 
 export function createPersistence(connectionString: string) {
@@ -36,6 +38,7 @@ export function createPersistence(connectionString: string) {
     paymentAccess: paymentAccessRepository(connection.db),
     approvedPayees: approvedPayeeRepository(connection.db),
     expectedPayments: expectedPaymentRepository(connection.db),
+    paymentAuthorizations: paymentAuthorizationRepository(connection.db),
     close: connection.close,
   };
 }

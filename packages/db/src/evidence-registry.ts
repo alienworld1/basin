@@ -51,10 +51,21 @@ export function attestActivation(
 }
 
 export function attestRelationshipEnd(
-  value: import("./evidence").VerifiedRelationshipEnd extends infer T
-    ? Omit<T & object, never>
-    : never,
+  value: {
+    approved_payee_id: bigint;
+    generation_id: bigint;
+    status: "REVOKED" | "EXPIRED" | "REAPPROVAL_REQUIRED";
+    occurred_at: Date;
+    cause?: string;
+  },
 ) {
   evidenceKinds.set(value, "relationshipEnd");
   return value as import("./evidence").VerifiedRelationshipEnd;
+}
+
+export function attestObligation(
+  value: import("zod").z.input<typeof import("./inputs").obligationInput>,
+) {
+  evidenceKinds.set(value, "obligation");
+  return value as import("./evidence").VerifiedObligation;
 }
