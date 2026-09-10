@@ -35,6 +35,13 @@ export default async function WorkspacePage({
       : Array.isArray(receivingQuery)
         ? "invalid"
         : undefined;
+  const expectedPaymentQuery = query.expectedPayment;
+  const requestedExpectedPaymentId =
+    typeof expectedPaymentQuery === "string"
+      ? expectedPaymentQuery
+      : Array.isArray(expectedPaymentQuery)
+        ? "invalid"
+        : undefined;
   const health = getEnvironmentHealth();
   const inspectorDetails: InspectorDetails = {
     environment: health.environment,
@@ -49,6 +56,7 @@ export default async function WorkspacePage({
       requestedWorkspaceId={requestedWorkspaceId}
       requestedRelationshipId={requestedRelationshipId}
       requestedReceivingRelationshipId={requestedReceivingRelationshipId}
+      requestedExpectedPaymentId={requestedExpectedPaymentId}
       navigation={navigation}
       inspectorDetails={inspectorDetails}
     />

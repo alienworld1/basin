@@ -33,12 +33,14 @@ export function ApprovedPayees({
   onTechnicalDetailsChange,
   onPendingChange,
   onSessionEnded,
+  onCreateExpectedPayment,
 }: {
   workspace: WorkspaceSummary;
   requestedRelationshipId?: string;
   onTechnicalDetailsChange: (details: RelationshipTechnicalDetails) => void;
   onPendingChange: (pending: boolean) => void;
   onSessionEnded: () => void;
+  onCreateExpectedPayment?: (approvedPayeeId: string) => void;
 }) {
   const auth = useBasinAuth();
   const { generateAuthorizationSignature } = useAuthorizationSignature();
@@ -600,6 +602,17 @@ export function ApprovedPayees({
             }}
             onRevoke={() => setSheet("revoke")}
             onCheck={() => void loadDetail(detail.id)}
+            onCreateExpectedPayment={
+              detail.eligible && detail.canRevoke && onCreateExpectedPayment
+                ? () => {
+                    setSheet(null);
+                    setDetail(undefined);
+                    onTechnicalDetailsChange(undefined);
+                    router.push(`/app?workspace=${workspace.id}`);
+                    onCreateExpectedPayment(detail.id);
+                  }
+                : undefined
+            }
           />
         ) : (
           <p className="text-sm text-ink-secondary">

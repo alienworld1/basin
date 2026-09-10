@@ -8,6 +8,7 @@ export function RelationshipDetail({
   onSetupReceiving,
   onRevoke,
   onCheck,
+  onCreateExpectedPayment,
 }: {
   detail: ApprovedPayeeDetailDto;
   busy: boolean;
@@ -15,6 +16,7 @@ export function RelationshipDetail({
   onSetupReceiving: () => void;
   onRevoke: () => void;
   onCheck: () => void;
+  onCreateExpectedPayment?: () => void;
 }) {
   const expiry = detail.expiresAt
     ? new Date(detail.expiresAt).toLocaleString(undefined, {
@@ -93,6 +95,11 @@ export function RelationshipDetail({
         </div>
       ) : null}
       <div className="flex flex-wrap gap-3">
+        {onCreateExpectedPayment ? (
+          <Button disabled={busy} onClick={onCreateExpectedPayment}>
+            Create expected payment
+          </Button>
+        ) : null}
         {detail.canSetupReceiving ? (
           <Button disabled={busy} onClick={onSetupReceiving}>
             Set up receiving

@@ -12,11 +12,13 @@ import { TreasuryControls } from "../treasury/treasury-controls";
 import { PaymentAccess } from "../payment-access/payment-access";
 import { ApprovedPayees } from "../approved-payees/approved-payees";
 import type { RelationshipTechnicalDetails } from "../../shared/approved-payee-types";
+import { ExpectedPayments } from "../expected-payments/expected-payments";
 
 export function ActiveWorkspace({
   workspace,
   requestedRelationshipId,
   requestedReceivingRelationshipId,
+  requestedExpectedPaymentId,
   userId,
   onIdentityDetailsChange,
   onPendingChange,
@@ -30,6 +32,7 @@ export function ActiveWorkspace({
   workspace: WorkspaceSummary;
   requestedRelationshipId?: string;
   requestedReceivingRelationshipId?: string;
+  requestedExpectedPaymentId?: string;
   userId: string;
   onIdentityDetailsChange: (
     details: IdentityTechnicalDetails | undefined,
@@ -47,6 +50,8 @@ export function ActiveWorkspace({
   const auth = useBasinAuth();
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState(false);
+  const [requestedApprovedPayeeId, setRequestedApprovedPayeeId] =
+    useState<string>();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const personalIncomplete =
     workspace.type === "personal" && auth.walletStatus === "MISSING";
@@ -75,6 +80,13 @@ export function ActiveWorkspace({
           requestedRelationshipId={requestedRelationshipId}
           onTechnicalDetailsChange={onRelationshipDetailsChange}
           onPendingChange={onRelationshipPendingChange}
+          onSessionEnded={onSessionEnded}
+        />
+        <ExpectedPayments
+          workspace={workspace}
+          requestedExpectedPaymentId={requestedExpectedPaymentId}
+          requestedApprovedPayeeId={requestedApprovedPayeeId}
+          onCreateRequestConsumed={() => setRequestedApprovedPayeeId(undefined)}
           onSessionEnded={onSessionEnded}
         />
       </section>
@@ -111,6 +123,14 @@ export function ActiveWorkspace({
           requestedRelationshipId={requestedRelationshipId}
           onTechnicalDetailsChange={onRelationshipDetailsChange}
           onPendingChange={onRelationshipPendingChange}
+          onSessionEnded={onSessionEnded}
+          onCreateExpectedPayment={setRequestedApprovedPayeeId}
+        />
+        <ExpectedPayments
+          workspace={workspace}
+          requestedExpectedPaymentId={requestedExpectedPaymentId}
+          requestedApprovedPayeeId={requestedApprovedPayeeId}
+          onCreateRequestConsumed={() => setRequestedApprovedPayeeId(undefined)}
           onSessionEnded={onSessionEnded}
         />
       </section>

@@ -27,6 +27,7 @@ type WorkspaceAppProps = {
   requestedWorkspaceId?: string;
   requestedRelationshipId?: string;
   requestedReceivingRelationshipId?: string;
+  requestedExpectedPaymentId?: string;
   navigation: NavigationItem[];
   inspectorDetails: InspectorDetails;
 };
@@ -45,6 +46,7 @@ export function WorkspaceApp({
   requestedWorkspaceId,
   requestedRelationshipId,
   requestedReceivingRelationshipId,
+  requestedExpectedPaymentId,
   navigation,
   inspectorDetails,
 }: WorkspaceAppProps) {
@@ -366,6 +368,7 @@ export function WorkspaceApp({
         workspace={activeWorkspace}
         requestedRelationshipId={requestedRelationshipId}
         requestedReceivingRelationshipId={requestedReceivingRelationshipId}
+        requestedExpectedPaymentId={requestedExpectedPaymentId}
         userId={result!.user.id}
         onIdentityDetailsChange={handleIdentityDetails}
         onPendingChange={handleIdentityPending}
