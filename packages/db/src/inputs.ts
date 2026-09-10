@@ -198,6 +198,36 @@ export const obligationInput = createInsertSchema(t.Obligation, {
   .omit({ created_at: true, updated_at: true })
   .strict();
 
+export const expectedPaymentInput = createInsertSchema(t.ExpectedPayment, {
+  organization_id: recordId,
+  approved_payee_id: recordId,
+  approved_payee_generation_id: recordId,
+  amount_base_units: amount,
+  asset_address: address,
+  purpose,
+  external_reference: externalReference.nullish(),
+  obligation_record_id: recordId.nullish(),
+  payment_record_id: recordId.nullish(),
+  created_by_member_id: recordId,
+  cancelled_by_member_id: recordId.nullish(),
+  cancelled_at: z.date().nullish(),
+  satisfied_at: z.date().nullish(),
+  created_at: z.date().optional(),
+  updated_at: z.date().optional(),
+})
+  .omit({
+    status: true,
+    status_reason_code: true,
+    obligation_record_id: true,
+    payment_record_id: true,
+    cancelled_by_member_id: true,
+    cancelled_at: true,
+    satisfied_at: true,
+    created_at: true,
+    updated_at: true,
+  })
+  .strict();
+
 export const paymentInput = createInsertSchema(t.Payment, {
   payment_id: hash,
   organization_id: recordId,

@@ -14,6 +14,8 @@ import {
   endReasons,
   executionPaths,
   idempotencyStatuses,
+  expectedPaymentStatuses,
+  expectedPaymentReasonCodes,
 } from "@basin/domain";
 export const basin = pgSchema("basin");
 export const id = () =>
@@ -42,6 +44,14 @@ export const obligationStatus = basin.enum(
   "obligation_status",
   obligationStatuses,
 );
+export const expectedPaymentStatus = basin.enum(
+  "expected_payment_status",
+  expectedPaymentStatuses,
+);
+export const expectedPaymentReasonCode = basin.enum(
+  "expected_payment_reason_code",
+  expectedPaymentReasonCodes,
+);
 export const paymentStatus = basin.enum("payment_status", paymentStatuses);
 export const eventType = basin.enum("payment_event_type", eventTypes);
 export const endReason = basin.enum("generation_end_reason", endReasons);
@@ -52,6 +62,8 @@ export const idempotencyStatus = basin.enum(
 );
 export const idempotencyScope = basin.enum("idempotency_scope", [
   "CREATE_PAYMENT",
+  "CREATE_EXPECTED_PAYMENT",
+  "CANCEL_EXPECTED_PAYMENT",
 ]);
 export const treasuryStatus = basin.enum("treasury_status", [
   "NOT_STARTED",

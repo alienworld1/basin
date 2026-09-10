@@ -10,6 +10,11 @@ GRANT UPDATE ON basin."user", basin.workspace, basin.organization, basin.organiz
   basin.organization_treasury, basin.privy_provisioning_operation,
   basin.privy_webhook_receipt, basin.routine_signer_secret,
   basin.organization_invitation TO :"runtime_role";
+GRANT UPDATE (status, status_reason_code, obligation_record_id, payment_record_id,
+  cancelled_by_member_id, cancelled_at, satisfied_at, updated_at)
+  ON basin.expected_payment TO :"runtime_role";
+GRANT UPDATE (expected_payment_id, completed_at)
+  ON basin.expected_payment_operation TO :"runtime_role";
 GRANT UPDATE (superseded_at) ON basin.identity_authority_version, basin.settlement_version TO :"runtime_role";
 GRANT UPDATE (ended_at, end_reason) ON basin.approved_payee_generation TO :"runtime_role";
 GRANT USAGE ON SCHEMA drizzle TO :"runtime_role";

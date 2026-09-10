@@ -161,6 +161,7 @@ export function workspaceRepository(db: Database) {
             workspace: Workspace,
             organizationId: Organization.id,
             memberRole: OrganizationMember.role,
+            memberId: OrganizationMember.id,
           })
           .from(Workspace)
           .leftJoin(Organization, eq(Organization.workspace_id, Workspace.id))
