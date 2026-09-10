@@ -17,6 +17,7 @@ import { Button } from "../button";
 import { Sheet } from "../sheet";
 import type { WorkspaceSummary } from "../shell-types";
 import { ApprovalReview } from "./approval-review";
+import { ReapprovalReview } from "./reapproval-review";
 import { RelationshipDetail } from "./relationship-detail";
 import { RelationshipList } from "./relationship-list";
 import { useRelationshipWallet } from "./use-relationship-wallet";
@@ -59,7 +60,7 @@ export function ApprovedPayees({
   );
   const [expiry, setExpiry] = useState(defaultExpiry);
   const [sheet, setSheet] = useState<
-    "approval" | "detail" | "setup" | "revoke" | null
+    "approval" | "detail" | "setup" | "reapprove" | "revoke" | null
   >(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -373,6 +374,77 @@ export function ApprovedPayees({
     }
   };
 
+  const reapprove = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const payee = await request<ResolvedPayeeDto>(
+        "/api/approved-payees/resolve",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: workspace.id,
+            identity: detail.payeeName,
+          }),
+        },
+      );
+      const prepared = await request<PreparedRelationshipDto>(
+        "/api/approved-payees/prepare",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: workspace.id,
+            action: "PROPOSE",
+            identityId: payee.identityId,
+            expiresAt: new Date(expiry).toISOString(),
+            idempotencyKey: crypto.randomUUID(),
+          }),
+        },
+      );
+      const authorized = await authorizeOrganizationOperation(
+        prepared.operation.id,
+      );
+      if (authorized.operation.status !== "CONFIRMED") {
+        setError(authorized.operation.message);
+        return;
+      }
+      setSheet(null);
+      await loadList();
+      if (prepared.relationshipId) await loadDetail(prepared.relationshipId);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const checkStatus = async () => {
+    if (!detail?.operation) {
+      if (detail) await loadDetail(detail.id);
+      return;
+    }
+    setBusy(true);
+    setError(undefined);
+    try {
+      await request("/api/approved-payees/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace.id,
+          operationId: detail.operation.id,
+        }),
+      });
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const setup = async () => {
     setBusy(true);
     setError(undefined);
@@ -600,8 +672,13 @@ export function ApprovedPayees({
                 `/app?workspace=${workspace.id}&receiving=${detail.id}`,
               );
             }}
+            onReapprove={() => {
+              setExpiry(defaultExpiry());
+              setError(undefined);
+              setSheet("reapprove");
+            }}
             onRevoke={() => setSheet("revoke")}
-            onCheck={() => void loadDetail(detail.id)}
+            onCheck={() => void checkStatus()}
             onCreateExpectedPayment={
               detail.eligible && detail.canRevoke && onCreateExpectedPayment
                 ? () => {
@@ -619,6 +696,27 @@ export function ApprovedPayees({
             Checking relationship authority…
           </p>
         )}
+        {error ? (
+          <p role="alert" className="mt-6 text-sm text-state-danger">
+            {error}
+          </p>
+        ) : null}
+      </Sheet>
+      <Sheet
+        isOpen={sheet === "reapprove"}
+        title="Re-establish approval"
+        onClose={() => setSheet("detail")}
+        returnFocusRef={trigger}
+      >
+        {detail ? (
+          <ReapprovalReview
+            detail={detail}
+            expiry={expiry}
+            busy={busy}
+            onExpiryChange={setExpiry}
+            onReapprove={() => void reapprove()}
+          />
+        ) : null}
         {error ? (
           <p role="alert" className="mt-6 text-sm text-state-danger">
             {error}

@@ -6,7 +6,11 @@ import {
   acceptanceTypes,
   basinRouterActivationAbi,
 } from "@basin/contracts";
-import { attestActivation, type createPersistence } from "@basin/db";
+import {
+  attestActivation,
+  attestRelationshipEnd,
+  type createPersistence,
+} from "@basin/db";
 import { DomainError } from "@basin/domain";
 import {
   createRelationshipReader,
@@ -27,6 +31,8 @@ import {
   keccak256,
   namehash,
   recoverTypedDataAddress,
+  TransactionNotFoundError,
+  TransactionReceiptNotFoundError,
   type Address,
 } from "viem";
 import { sepolia } from "viem/chains";
@@ -410,23 +416,89 @@ export function createApprovedPayeeService(
       organizationId,
       target.id,
     );
-    if (existing.status === "ACTIVE") {
-      throw new DomainError(
-        "CONFLICT",
-        "This payee already has an active approval.",
-      );
-    }
     const relationshipName = deriveRelationshipName(
       target.ens_name,
       organization.identity.label,
     );
     const existingDetail = await persistence.approvedPayees.detail(existing.id);
+    const existingExpiry = existingDetail.relationship.expires_at;
+    let replacesExisting = ["EXPIRED", "REAPPROVAL_REQUIRED"].includes(
+      existing.status,
+    );
+    const approvalIsCurrent =
+      existing.status === "ACTIVE" &&
+      existingExpiry !== null &&
+      existingExpiry > new Date();
+    if (approvalIsCurrent) {
+      const generation = existingDetail.generation;
+      const root = existingDetail.root;
+      if (!generation || !root || !existingDetail.relationship.relationship_name) {
+        throw new DomainError(
+          "CONFLICT",
+          "This payee already has an active approval.",
+        );
+      }
+      const config = approvedPayeeConfiguration();
+      const observed = await createRelationshipReader(config.ens).observe({
+        name: existingDetail.relationship.relationship_name,
+        identityName: target.ens_name,
+        controller: getAddress(target.controller_address),
+        identityEpoch: BigInt(target.identity_epoch),
+        tokenId: BigInt(generation.relationship_token_id),
+        registry: getAddress(generation.relationship_registry_address),
+      });
+      let authorityChanged =
+        observed.profile !== root.security_root_commitment;
+      if (!authorityChanged && config.activation) {
+        const accepted = await createPublicClient({
+          chain: sepolia,
+          transport: http(config.ens.rpcUrl, { timeout: 8_000, retryCount: 1 }),
+        }).readContract({
+          address: config.activation.address,
+          abi: basinRouterActivationAbi,
+          functionName: "acceptedRoot",
+          args: [
+            getAddress(root.organization_wallet_address),
+            generation.relationship_namehash as `0x${string}`,
+            BigInt(generation.relationship_token_id),
+          ],
+          blockNumber: observed.blockNumber,
+        });
+        authorityChanged =
+          accepted[0] !== root.security_root_commitment ||
+          accepted[1] !== root.payee_id ||
+          accepted[2] !==
+            BigInt(
+              Math.floor(root.accepted_relationship_expiry.getTime() / 1000),
+            ) ||
+          accepted[3] !== BigInt(root.acceptance_nonce);
+      }
+      if (!authorityChanged) {
+        throw new DomainError(
+          "CONFLICT",
+          "This payee already has an active approval.",
+        );
+      }
+      await persistence.relationships.end(
+        organizationId,
+        attestRelationshipEnd({
+          approved_payee_id: existing.id,
+          generation_id: generation.id,
+          status: "REAPPROVAL_REQUIRED",
+          occurred_at: new Date(Number(observed.timestamp) * 1000),
+          cause: "Current authority no longer matches the accepted approval.",
+        }),
+      );
+      replacesExisting = true;
+    }
     if (
       existingDetail.operation?.kind === "PROPOSE" &&
       existingDetail.operation.actor_user_id === actorUserId &&
       existingDetail.operation.actor_workspace_id === workspaceId &&
       existingDetail.operation.review_snapshot.relationshipName ===
         relationshipName &&
+      existingDetail.operation.review_snapshot.replacesExisting ===
+        replacesExisting &&
       (existingDetail.operation.transaction_hashes.length > 0 ||
         existingDetail.operation.review_snapshot.expiresAt ===
           expiresAt.toISOString())
@@ -461,6 +533,7 @@ export function createApprovedPayeeService(
         relationshipName,
         relationshipRegistry: namespace.registry_address,
         expiresAt: expiresAt.toISOString(),
+        replacesExisting,
       },
       review_expires_at: new Date(Date.now() + 5 * 60 * 1000),
     });
@@ -640,7 +713,10 @@ export function createApprovedPayeeService(
       canReapprove:
         organizationViewer &&
         access.memberRole === "ADMIN" &&
-        ["EXPIRED", "REVOKED", "REAPPROVAL_REQUIRED"].includes(row.status),
+        (["EXPIRED", "REVOKED", "REAPPROVAL_REQUIRED"].includes(
+          row.status,
+        ) ||
+          verification === "changed"),
       operation: value.operation ? operationDto(value.operation) : undefined,
       history: value.events.map((event) => ({
         id: event.id.toString(),
@@ -1045,7 +1121,13 @@ export function createApprovedPayeeService(
               ? error.code
               : "NAMESPACE_SETUP_UNCONFIRMED";
         await persistence.approvedPayees.updateOperation(operation.id, {
-          status: "NEEDS_ATTENTION",
+          // A collision before a transaction hash exists is final: it cannot
+          // become confirmed through reconciliation and must not keep the
+          // relationship locked as an action in progress.
+          status:
+            error instanceof EnsProtocolError && error.code === "COLLISION"
+              ? "FAILED"
+              : "NEEDS_ATTENTION",
           step: "VERIFYING",
           last_error_code: setupErrorCode,
         });
@@ -1159,7 +1241,9 @@ export function createApprovedPayeeService(
             typeof snapshot.identityController !== "string" ||
             typeof snapshot.identityEpoch !== "string" ||
             typeof snapshot.relationshipRegistry !== "string" ||
-            typeof snapshot.expiresAt !== "string"
+            typeof snapshot.expiresAt !== "string" ||
+            (snapshot.replacesExisting !== undefined &&
+              typeof snapshot.replacesExisting !== "boolean")
           ) {
             throw new DomainError(
               "CONFLICT",
@@ -1194,6 +1278,7 @@ export function createApprovedPayeeService(
             registry: getAddress(snapshot.relationshipRegistry),
             expiry: BigInt(Math.floor(expiry.getTime() / 1000)),
             generationSalt: operation.id,
+            replaceExisting: snapshot.replacesExisting === true,
           });
           for (const hash of provisioned.transactionHashes)
             if (!transactionHashes.includes(hash)) transactionHashes.push(hash);
@@ -1489,6 +1574,18 @@ export function createApprovedPayeeService(
     // server-side context; a caller-supplied hash is never sufficient evidence.
     if (operation.kind !== "ACCEPT") {
       if (
+        operation.status === "NEEDS_ATTENTION" &&
+        operation.transaction_hashes.length === 0 &&
+        operation.last_error_code === "COLLISION"
+      ) {
+        return operationDto(
+          await persistence.approvedPayees.updateOperation(operation.id, {
+            status: "FAILED",
+            last_error_code: "COLLISION",
+          }),
+        );
+      }
+      if (
         operation.transaction_hashes.length > 0 &&
         ["SUBMITTED", "NEEDS_ATTENTION"].includes(operation.status)
       ) {
@@ -1564,11 +1661,27 @@ export function createApprovedPayeeService(
       chain: sepolia,
       transport: http(config.ens.rpcUrl, { timeout: 8_000, retryCount: 1 }),
     });
-    const [transaction, receipt, head] = await Promise.all([
-      client.getTransaction({ hash }),
-      client.getTransactionReceipt({ hash }),
-      client.getBlockNumber({ cacheTime: 0 }),
-    ]);
+    let transaction: Awaited<ReturnType<typeof client.getTransaction>>;
+    let receipt: Awaited<ReturnType<typeof client.getTransactionReceipt>>;
+    let head: bigint;
+    try {
+      [transaction, receipt, head] = await Promise.all([
+        client.getTransaction({ hash }),
+        client.getTransactionReceipt({ hash }),
+        client.getBlockNumber({ cacheTime: 0 }),
+      ]);
+    } catch (error) {
+      // A submitted transaction may take a block or two to become queryable.
+      // Keep the operation resumable instead of presenting that normal delay as
+      // a failed acceptance.
+      if (
+        error instanceof TransactionNotFoundError ||
+        error instanceof TransactionReceiptNotFoundError
+      ) {
+        return operationDto(operation);
+      }
+      throw error;
+    }
     if (
       !transaction.to ||
       transaction.to.toLowerCase() !==

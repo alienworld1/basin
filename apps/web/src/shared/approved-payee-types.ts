@@ -100,13 +100,13 @@ export type PreparedRelationshipDto = {
     requestExpiry: number;
     request: {
       version: 1;
-      method: "POST";
+      method: "POST" | "PATCH";
       url: string;
       body: Record<string, unknown>;
       headers: {
         "privy-app-id": string;
-        "privy-idempotency-key": string;
-        "privy-request-expiry": string;
+        "privy-idempotency-key"?: string;
+        "privy-request-expiry"?: string;
       };
     };
   };

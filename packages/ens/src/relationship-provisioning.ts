@@ -274,6 +274,7 @@ export function createRelationshipProvisioner(
     registry: Address;
     expiry: bigint;
     generationSalt: bigint;
+    replaceExisting?: boolean;
   }) {
     const [label, organization, basin, eth] = input.name.split(".");
     if (
@@ -298,12 +299,39 @@ export function createRelationshipProvisioner(
       input.generationSalt,
       transactions,
     );
-    const state = await client.readContract({
+    let state = await client.readContract({
       address: registry,
       abi: registryAbi,
       functionName: "getState",
       args: [BigInt(labelhash(label))],
     });
+    if (state.status === 2 && input.replaceExisting) {
+      if (!same(state.latestOwner, controller)) {
+        throw new EnsProtocolError(
+          "COLLISION",
+          "This relationship name is already in use.",
+        );
+      }
+      const hash = await sendOrganizationTransaction({
+        to: registry,
+        data: encodeFunctionData({
+          abi: registryAbi,
+          functionName: "unregister",
+          args: [state.tokenId],
+        }),
+        value: "0x0",
+        chainId: 11155111,
+        idempotencySuffix: "replace-relationship",
+      });
+      await confirmed(hash);
+      transactions.push(hash);
+      state = await client.readContract({
+        address: registry,
+        abi: registryAbi,
+        functionName: "getState",
+        args: [BigInt(labelhash(label))],
+      });
+    }
     if (state.status === 0) {
       const hash = await sendOrganizationTransaction({
         to: registry,

@@ -1,23 +1,19 @@
 import "server-only";
 
-import { sepoliaActivationDeployment } from "@basin/contracts";
 import { getAddress } from "viem";
 import { z } from "zod";
 
 import { getEnsServerEnvironment } from "../config/environment";
+import { basinRouterManifest } from "../config/basin-router-manifest";
 
 export function approvedPayeeConfiguration() {
   const ens = getEnsServerEnvironment();
   const router = z
-    .object({ address: z.string(), version: z.literal("1") })
-    .safeParse({
-      address:
-        process.env.BASIN_ACTIVATION_ROUTER_ADDRESS?.trim() ??
-        sepoliaActivationDeployment.routerAddress,
-      version:
-        process.env.BASIN_ACTIVATION_ROUTER_VERSION?.trim() ??
-        sepoliaActivationDeployment.version,
-    });
+    .object({
+      address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      version: z.literal("1"),
+    })
+    .safeParse(basinRouterManifest);
   return {
     ens,
     activation: router.success
