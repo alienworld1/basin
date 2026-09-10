@@ -10,12 +10,23 @@ import {
   type PrivyTreasuryAdapter,
   type WalletEvidence,
 } from "./adapter";
-import { configuredRoutineLimit, treasuryConfiguration, treasuryRouterConfigured } from "./config";
+import {
+  configuredRoutineLimit,
+  treasuryConfiguration,
+  treasuryRouterConfigured,
+} from "./config";
 import { generateRoutineKey } from "./protection";
-import { buildRoutinePolicy, observedPolicyFingerprint, policyFingerprint } from "./policy";
+import {
+  buildRoutinePolicy,
+  observedPolicyFingerprint,
+  policyFingerprint,
+} from "./policy";
+import { readTreasuryBalance, type TreasuryBalance } from "./balance";
 
 type Persistence = ReturnType<typeof createPersistence>;
-type Access = Awaited<ReturnType<Persistence["workspaces"]["readWorkspaceAccess"]>>;
+type Access = Awaited<
+  ReturnType<Persistence["workspaces"]["readWorkspaceAccess"]>
+>;
 
 const digest = (value: unknown) =>
   `0x${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
@@ -49,6 +60,7 @@ function response(
   organization: Organization,
   treasury: OrganizationTreasury | null,
   operation: Awaited<ReturnType<Persistence["treasury"]["latestOperation"]>>,
+  balance?: TreasuryBalance,
 ): TreasuryStatusResponse {
   const status = treasury?.status ?? "NOT_STARTED";
   return {
@@ -59,13 +71,33 @@ function response(
       status,
       network: "Ethereum Sepolia",
       routerConfigured: treasuryRouterConfigured(),
-      ...(treasury?.routine_per_tx_limit_base_units ?? configuredRoutineLimit()
-        ? { routineLimit: treasury?.routine_per_tx_limit_base_units ?? configuredRoutineLimit() }
+      ...((treasury?.routine_per_tx_limit_base_units ??
+      configuredRoutineLimit())
+        ? {
+            routineLimit:
+              treasury?.routine_per_tx_limit_base_units ??
+              configuredRoutineLimit(),
+          }
         : {}),
       ...(treasury?.last_verified_at
         ? { lastVerifiedAt: treasury.last_verified_at.toISOString() }
         : {}),
-      ...(treasury?.last_error_code ? { errorCode: treasury.last_error_code } : {}),
+      ...(treasury?.last_error_code
+        ? { errorCode: treasury.last_error_code }
+        : {}),
+      ...(treasury?.wallet_address
+        ? {
+            account: {
+              address: treasury.wallet_address,
+              ...(balance
+                ? {
+                    ethBalanceWei: balance.ethBalanceWei,
+                    balanceCheckedAt: balance.checkedAt.toISOString(),
+                  }
+                : {}),
+            },
+          }
+        : {}),
       ...(operation
         ? {
             operation: {
@@ -78,22 +110,36 @@ function response(
         : {}),
     },
     technical: {
-      ...(treasury?.wallet_address ? { walletAddress: treasury.wallet_address } : {}),
+      ...(treasury?.wallet_address
+        ? { walletAddress: treasury.wallet_address }
+        : {}),
       ...(organization.privy_organization_id
         ? { privyOrganizationId: organization.privy_organization_id }
         : {}),
-      ...(treasury?.privy_wallet_id ? { privyWalletId: treasury.privy_wallet_id } : {}),
-      ...(treasury?.owner_quorum_id ? { ownerQuorumId: treasury.owner_quorum_id } : {}),
+      ...(treasury?.privy_wallet_id
+        ? { privyWalletId: treasury.privy_wallet_id }
+        : {}),
+      ...(treasury?.owner_quorum_id
+        ? { ownerQuorumId: treasury.owner_quorum_id }
+        : {}),
       ...(treasury?.owner_quorum_threshold
         ? { ownerQuorumThreshold: treasury.owner_quorum_threshold }
         : {}),
-      ...(treasury?.routine_signer_id ? { routineSignerId: treasury.routine_signer_id } : {}),
-      ...(treasury?.routine_policy_id ? { routinePolicyId: treasury.routine_policy_id } : {}),
+      ...(treasury?.routine_signer_id
+        ? { routineSignerId: treasury.routine_signer_id }
+        : {}),
+      ...(treasury?.routine_policy_id
+        ? { routinePolicyId: treasury.routine_policy_id }
+        : {}),
       ...(treasury?.routine_policy_fingerprint
         ? { routinePolicyFingerprint: treasury.routine_policy_fingerprint }
         : {}),
-      ...(treasury?.router_address ? { routerAddress: treasury.router_address } : {}),
-      ...(treasury?.router_version ? { routerVersion: treasury.router_version } : {}),
+      ...(treasury?.router_address
+        ? { routerAddress: treasury.router_address }
+        : {}),
+      ...(treasury?.router_version
+        ? { routerVersion: treasury.router_version }
+        : {}),
       ...(treasury?.routine_per_tx_limit_base_units
         ? { routineLimit: treasury.routine_per_tx_limit_base_units }
         : {}),
@@ -110,22 +156,42 @@ export function createTreasuryService(
   privyUserId: string,
   providedAdapter?: PrivyTreasuryAdapter,
 ) {
-  if (!access.organizationId || !access.memberRole || access.workspace.type !== "ORGANIZATION")
+  if (
+    !access.organizationId ||
+    !access.memberRole ||
+    access.workspace.type !== "ORGANIZATION"
+  )
     throw new Error("Organization access required");
   const organizationId = access.organizationId;
   const adapter = () => providedAdapter ?? createPrivyTreasuryAdapter();
 
   async function state() {
-    const context = await persistence.treasury.byWorkspace(access.workspace.id);
-    const operation = await persistence.treasury.latestOperation(organizationId);
-    return response(access, context.organization, context.treasury, operation);
+    const [context, operation] = await Promise.all([
+      persistence.treasury.byWorkspace(access.workspace.id),
+      persistence.treasury.latestOperation(organizationId),
+    ]);
+    const balance = context.treasury?.wallet_address
+      ? await readTreasuryBalance(context.treasury.wallet_address)
+      : undefined;
+    return response(
+      access,
+      context.organization,
+      context.treasury,
+      operation,
+      balance,
+    );
   }
 
   async function reconcile() {
     const context = await persistence.treasury.byWorkspace(access.workspace.id);
     const treasury = context.treasury;
-    if (!treasury || !context.organization.privy_organization_id) return state();
-    if (!treasury.owner_quorum_id || !treasury.routine_signer_id || !treasury.privy_wallet_id)
+    if (!treasury || !context.organization.privy_organization_id)
+      return state();
+    if (
+      !treasury.owner_quorum_id ||
+      !treasury.routine_signer_id ||
+      !treasury.privy_wallet_id
+    )
       return state();
     try {
       const [org, owner, signer, wallet] = await Promise.all([
@@ -134,7 +200,8 @@ export function createTreasuryService(
         adapter().getQuorum(treasury.routine_signer_id),
         adapter().getWallet(treasury.privy_wallet_id),
       ]);
-      const adminPrivyUserIds = await persistence.treasury.adminPrivyUserIds(organizationId);
+      const adminPrivyUserIds =
+        await persistence.treasury.adminPrivyUserIds(organizationId);
       const secret = await persistence.treasury.signerSecret(organizationId);
       if (
         org.defaultQuorumId !== owner.id ||
@@ -145,11 +212,19 @@ export function createTreasuryService(
         !secret ||
         signer.publicKeys.length !== 1 ||
         signer.publicKeys[0] !== secret.public_key
-      ) throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
+      )
+        throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
       let expectedPolicyFingerprint: string | undefined;
       if (treasury.routine_policy_id) {
-        const policy = await adapter().getPolicy(treasury.routine_policy_id, observedPolicyFingerprint);
-        if (!treasury.routine_policy_fingerprint || policy.ownerId !== owner.id || policy.fingerprint !== treasury.routine_policy_fingerprint)
+        const policy = await adapter().getPolicy(
+          treasury.routine_policy_id,
+          observedPolicyFingerprint,
+        );
+        if (
+          !treasury.routine_policy_fingerprint ||
+          policy.ownerId !== owner.id ||
+          policy.fingerprint !== treasury.routine_policy_fingerprint
+        )
           throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
         expectedPolicyFingerprint = policy.fingerprint;
       }
@@ -170,10 +245,16 @@ export function createTreasuryService(
         last_error_code: null,
       });
     } catch (error) {
-      const code = error instanceof TreasuryProviderError ? error.code : "UNKNOWN_EXTERNAL_STATE";
+      const code =
+        error instanceof TreasuryProviderError
+          ? error.code
+          : "UNKNOWN_EXTERNAL_STATE";
       await persistence.treasury.saveTreasury({
         organization_id: organizationId,
-        status: code === "PRIVY_UNAVAILABLE" || code === "RATE_LIMITED" ? treasury.status : "NEEDS_ATTENTION",
+        status:
+          code === "PRIVY_UNAVAILABLE" || code === "RATE_LIMITED"
+            ? treasury.status
+            : "NEEDS_ATTENTION",
         last_error_code: code,
       });
     }
@@ -200,12 +281,14 @@ export function createTreasuryService(
       if (intent.status !== "executed") {
         await persistence.treasury.updateOperation(operation.id, {
           status: "FAILED_FINAL",
-          safe_error_code: intent.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
+          safe_error_code:
+            intent.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
         });
         await persistence.treasury.saveTreasury({
           organization_id: organizationId,
           status: "FAILED",
-          last_error_code: intent.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
+          last_error_code:
+            intent.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
         });
         return state();
       }
@@ -217,12 +300,19 @@ export function createTreasuryService(
     const providerKey = operation.idempotency_key;
     const context = await persistence.treasury.byWorkspace(access.workspace.id);
     let treasury = context.treasury;
-    await persistence.treasury.saveTreasury({ organization_id: organizationId, status: "PROVISIONING" });
+    await persistence.treasury.saveTreasury({
+      organization_id: organizationId,
+      status: "PROVISIONING",
+    });
     try {
       let ownerId = treasury?.owner_quorum_id;
       if (ownerId) {
         const owner = await adapter().getQuorum(ownerId);
-        if (owner.threshold !== 1 || owner.userIds.length !== 1 || owner.userIds[0] !== privyUserId)
+        if (
+          owner.threshold !== 1 ||
+          owner.userIds.length !== 1 ||
+          owner.userIds[0] !== privyUserId
+        )
           throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
       } else {
         const owner = await adapter().createOwnerQuorum({
@@ -231,7 +321,11 @@ export function createTreasuryService(
           idempotencyKey: `${providerKey}-owner`,
         });
         const verified = await adapter().getQuorum(owner.id);
-        if (verified.threshold !== 1 || verified.userIds.length !== 1 || verified.userIds[0] !== privyUserId)
+        if (
+          verified.threshold !== 1 ||
+          verified.userIds.length !== 1 ||
+          verified.userIds[0] !== privyUserId
+        )
           throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
         ownerId = verified.id;
         treasury = await persistence.treasury.saveTreasury({
@@ -240,13 +334,16 @@ export function createTreasuryService(
           owner_quorum_id: ownerId,
           owner_quorum_threshold: 1,
         });
-        await persistence.treasury.updateOperation(operation.id, { step: "OWNER_QUORUM_VERIFIED" });
+        await persistence.treasury.updateOperation(operation.id, {
+          step: "OWNER_QUORUM_VERIFIED",
+        });
       }
 
       let privyOrganizationId = context.organization.privy_organization_id;
       if (privyOrganizationId) {
         const org = await adapter().getOrganization(privyOrganizationId);
-        if (org.defaultQuorumId !== ownerId) throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
+        if (org.defaultQuorumId !== ownerId)
+          throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
       } else {
         const org = await adapter().createOrganization({
           quorumId: ownerId,
@@ -254,14 +351,21 @@ export function createTreasuryService(
           idempotencyKey: `${providerKey}-organization`,
         });
         const verified = await adapter().getOrganization(org.id);
-        if (verified.defaultQuorumId !== ownerId) throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
-        await persistence.treasury.saveOrganizationMapping(organizationId, verified.id);
+        if (verified.defaultQuorumId !== ownerId)
+          throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
+        await persistence.treasury.saveOrganizationMapping(
+          organizationId,
+          verified.id,
+        );
         privyOrganizationId = verified.id;
-        await persistence.treasury.updateOperation(operation.id, { step: "ORGANIZATION_VERIFIED" });
+        await persistence.treasury.updateOperation(operation.id, {
+          step: "ORGANIZATION_VERIFIED",
+        });
       }
 
       let signerId = treasury?.routine_signer_id;
-      let signerSecret = await persistence.treasury.signerSecret(organizationId);
+      let signerSecret =
+        await persistence.treasury.signerSecret(organizationId);
       if (!signerSecret) {
         if (signerId) throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
         const sealed = generateRoutineKey(organizationId, config.signerSecret);
@@ -277,7 +381,10 @@ export function createTreasuryService(
       }
       if (signerId) {
         const signer = await adapter().getQuorum(signerId);
-        if (signer.publicKeys.length !== 1 || signer.publicKeys[0] !== signerSecret.public_key)
+        if (
+          signer.publicKeys.length !== 1 ||
+          signer.publicKeys[0] !== signerSecret.public_key
+        )
           throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
       } else {
         const signer = await adapter().createRoutineSigner({
@@ -286,7 +393,11 @@ export function createTreasuryService(
           idempotencyKey: `${providerKey}-routine`,
         });
         const verified = await adapter().getQuorum(signer.id);
-        if (verified.threshold !== 1 || verified.publicKeys.length !== 1 || verified.publicKeys[0] !== signerSecret.public_key)
+        if (
+          verified.threshold !== 1 ||
+          verified.publicKeys.length !== 1 ||
+          verified.publicKeys[0] !== signerSecret.public_key
+        )
           throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
         signerId = verified.id;
         treasury = await persistence.treasury.saveTreasury({
@@ -294,7 +405,9 @@ export function createTreasuryService(
           status: "PROVISIONING",
           routine_signer_id: signerId,
         });
-        await persistence.treasury.updateOperation(operation.id, { step: "ROUTINE_SIGNER_VERIFIED" });
+        await persistence.treasury.updateOperation(operation.id, {
+          step: "ROUTINE_SIGNER_VERIFIED",
+        });
       }
 
       let walletId = treasury?.privy_wallet_id;
@@ -309,16 +422,28 @@ export function createTreasuryService(
         });
         expectedPolicyFingerprint = policyFingerprint(definition);
         if (routinePolicyId) {
-          const policy = await adapter().getPolicy(routinePolicyId, observedPolicyFingerprint);
-          if (policy.ownerId !== ownerId || policy.fingerprint !== expectedPolicyFingerprint)
+          const policy = await adapter().getPolicy(
+            routinePolicyId,
+            observedPolicyFingerprint,
+          );
+          if (
+            policy.ownerId !== ownerId ||
+            policy.fingerprint !== expectedPolicyFingerprint
+          )
             throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
         } else {
           const created = await adapter().createPolicy({
             definition,
             idempotencyKey: `${providerKey}-policy`,
           });
-          const policy = await adapter().getPolicy(created.id, observedPolicyFingerprint);
-          if (policy.ownerId !== ownerId || policy.fingerprint !== expectedPolicyFingerprint)
+          const policy = await adapter().getPolicy(
+            created.id,
+            observedPolicyFingerprint,
+          );
+          if (
+            policy.ownerId !== ownerId ||
+            policy.fingerprint !== expectedPolicyFingerprint
+          )
             throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
           routinePolicyId = policy.id;
           treasury = await persistence.treasury.saveTreasury({
@@ -331,7 +456,9 @@ export function createTreasuryService(
             router_version: config.router.version,
             routine_per_tx_limit_base_units: config.router.limit,
           });
-          await persistence.treasury.updateOperation(operation.id, { step: "POLICY_VERIFIED" });
+          await persistence.treasury.updateOperation(operation.id, {
+            step: "POLICY_VERIFIED",
+          });
         }
       }
       let wallet: WalletEvidence;
@@ -411,14 +538,21 @@ export function createTreasuryService(
         safe_error_code: null,
       });
     } catch (error) {
-      const code = error instanceof TreasuryProviderError ? error.code : "UNKNOWN_EXTERNAL_STATE";
+      const code =
+        error instanceof TreasuryProviderError
+          ? error.code
+          : "UNKNOWN_EXTERNAL_STATE";
       await persistence.treasury.saveTreasury({
         organization_id: organizationId,
-        status: code === "CONFIGURATION_MISMATCH" ? "NEEDS_ATTENTION" : "FAILED",
+        status:
+          code === "CONFIGURATION_MISMATCH" ? "NEEDS_ATTENTION" : "FAILED",
         last_error_code: code,
       });
       await persistence.treasury.updateOperation(operation.id, {
-        status: code === "CONFIGURATION_MISMATCH" ? "FAILED_FINAL" : "FAILED_RETRYABLE",
+        status:
+          code === "CONFIGURATION_MISMATCH"
+            ? "FAILED_FINAL"
+            : "FAILED_RETRYABLE",
         safe_error_code: code,
       });
     }

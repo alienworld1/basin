@@ -125,8 +125,13 @@ export async function receivingHandler(
       kind === "confirm"
         ? confirmInput.parse(input)
         : recoveryInput.parse(input);
-    if ("walletOutcome" in body && body.walletOutcome === "REJECTED")
-      return noStoreJson(await service.rejectWallet(BigInt(body.operationId)));
+    if ("walletOutcome" in body && body.walletOutcome)
+      return noStoreJson(
+        await service.releaseUnsubmitted(
+          BigInt(body.operationId),
+          body.walletOutcome,
+        ),
+      );
     const result = await service.reconcile(
       BigInt(body.operationId),
       "transactionHash" in body ? String(body.transactionHash) : undefined,

@@ -107,7 +107,7 @@ export function operationDto(op: SettlementOperation): ReceivingOperationDto {
       "Receiving account confirmed. Relationship acceptance is still needed.",
     FAILED: "The transaction reverted. Check your current receiving details.",
     UNKNOWN:
-      "We couldn't confirm the result yet. Check again before trying another change.",
+      "Confirmation is still in progress. Basin is checking Sepolia for your receiving change.",
     NEEDS_REVIEW: "Receiving details need review.",
   };
   return {
@@ -123,9 +123,11 @@ export function operationDto(op: SettlementOperation): ReceivingOperationDto {
     message:
       op.error_code === "SIGNATURE_REJECTED"
         ? "You cancelled the change. Your receiving account is unchanged."
-        : op.error_code === "CANCELLED_BEFORE_SIGNATURE"
-          ? "Receiving change cancelled."
-          : messages[op.status],
+        : op.error_code === "NOT_SUBMITTED"
+          ? "Nothing was submitted. You can try the change again."
+          : op.error_code === "CANCELLED_BEFORE_SIGNATURE"
+            ? "Receiving change cancelled."
+            : messages[op.status],
   };
 }
 function versionDto(op: SettlementOperation): ReceivingVersionDto {
@@ -406,7 +408,10 @@ export function createReceivingService(
       await repo.transitionPrepared(workspaceId, operationId, true),
     );
   }
-  async function rejectWallet(operationId: bigint) {
+  async function releaseUnsubmitted(
+    operationId: bigint,
+    outcome: "REJECTED" | "NOT_SUBMITTED",
+  ) {
     const op = await repo.operation(workspaceId, operationId);
     requireSettlement(
       op.identity_id === identity.id &&
@@ -421,12 +426,13 @@ export function createReceivingService(
         state.profile === prepared.profile,
       "STALE",
     );
-    // A single issued wallet request explicitly rejected signing. This is workflow cancellation,
-    // not chain failure evidence; ambiguous provider errors never enter this branch.
+    // Only a client-observed rejection or a failure before Privy was invoked enters
+    // this branch. Ambiguous provider errors remain UNKNOWN and cannot be retried.
     return operationDto(
       await repo.update(workspaceId, op.id, {
         status: "FAILED",
-        error_code: "SIGNATURE_REJECTED",
+        error_code:
+          outcome === "REJECTED" ? "SIGNATURE_REJECTED" : "NOT_SUBMITTED",
       }),
     );
   }
@@ -611,11 +617,7 @@ export function createReceivingService(
       (op) => op.relationship_id === selectedId,
     );
     let pending = operations.find(isUnresolved);
-    if (
-      pending &&
-      pending.status !== "PREPARED" &&
-      pending.status !== "NEEDS_REVIEW"
-    ) {
+    if (pending && ["SUBMITTED", "VERIFYING"].includes(pending.status)) {
       await reconcile(pending.id);
       operations = await repo.operations(workspaceId, selectedId);
       pending = operations.find(isUnresolved);
@@ -700,13 +702,63 @@ export function createReceivingService(
     }
     return result;
   }
+  async function reconcileInitialAfterActivation(relationshipId: bigint) {
+    const context = await contextFor(relationshipId);
+    requireSettlement(context.root, "UNVERIFIED");
+    const operations = await repo.operations(workspaceId, relationshipId);
+    const operation = operations.find(
+      (item) =>
+        item.status === "CONFIRMED" &&
+        item.relationship_token_id ===
+          context.generation!.relationship_token_id,
+    );
+    requireSettlement(operation, "UNVERIFIED");
+    const prepared = unpack(operation);
+    const observed = await adapter.read(scopeFor(context));
+    const acceptedRoot = await verifyActivation(context, observed);
+    requireSettlement(
+      acceptedRoot === context.root.security_root_commitment &&
+        observed.record === descriptorRecord(prepared.descriptor),
+      "REAPPROVAL_REQUIRED",
+    );
+    const descriptor = prepared.descriptor;
+    await persistence.relationships.appendSettlement(
+      context.relationship.organization_id,
+      attestSettlementVersion({
+        approved_payee_generation_id: context.generation!.id,
+        approved_security_root_id: context.root.id,
+        settlement_epoch: operation.target_epoch,
+        commitment: operation.commitment,
+        descriptor_version: 1,
+        chain_id: 11155111,
+        asset_address: descriptor.asset,
+        destination_ciphertext: seal(
+          descriptor.destination,
+          versionContext(
+            workspaceId,
+            identity.id,
+            context.generation!.id,
+            operation.target_epoch,
+          ),
+          config.secret,
+        ),
+        destination_fingerprint: null,
+        valid_from: new Date(Number(descriptor.validFrom) * 1000),
+        superseded_at: null,
+      }),
+    );
+    return repo.update(workspaceId, operation.id, {
+      accepted_root_digest: context.root.security_root_commitment,
+    });
+  }
   return {
     status,
     savePreference,
     prepare,
     authorize,
     cancel,
-    rejectWallet,
+    releaseUnsubmitted,
     reconcile,
+    reconcileInitialAfterActivation,
   };
 }

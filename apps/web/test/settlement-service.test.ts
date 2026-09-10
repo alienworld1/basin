@@ -241,7 +241,9 @@ test("missing hash, reverted writes, and authority disagreement never append his
   const h = harness();
   await h.service.prepare(3n, dest, key);
   await h.service.authorize(5n);
-  assert.equal((await h.service.reconcile(5n)).status, "UNKNOWN");
+  const unresolved = await h.service.reconcile(5n);
+  assert.equal(unresolved.status, "UNKNOWN");
+  assert.match(unresolved.message, /still in progress/);
   h.verifyError(new SettlementError("REAPPROVAL_REQUIRED"));
   assert.equal((await h.service.reconcile(5n, digest)).status, "NEEDS_REVIEW");
   assert.equal(h.finalizations(), 0);
@@ -252,13 +254,15 @@ test("missing hash, reverted writes, and authority disagreement never append his
   assert.equal((await reverted.service.reconcile(5n, digest)).status, "FAILED");
   assert.equal(reverted.finalizations(), 0);
 });
-test("explicit wallet rejection releases only an unbroadcast operation after fresh unchanged state", async () => {
+test("a known unsubmitted wallet action releases only an unchanged operation", async () => {
   const h = harness();
   await h.service.prepare(3n, dest, key);
   await h.service.authorize(5n);
   h.setRecord(descriptorRecord(prepared.descriptor));
-  await assert.rejects(h.service.rejectWallet(5n));
+  await assert.rejects(h.service.releaseUnsubmitted(5n, "NOT_SUBMITTED"));
   h.setRecord("0x");
-  assert.equal((await h.service.rejectWallet(5n)).status, "FAILED");
+  const result = await h.service.releaseUnsubmitted(5n, "NOT_SUBMITTED");
+  assert.equal(result.status, "FAILED");
+  assert.match(result.message, /Nothing was submitted/);
   assert.equal(h.finalizations(), 0);
 });

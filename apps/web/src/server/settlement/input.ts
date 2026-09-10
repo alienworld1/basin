@@ -36,7 +36,7 @@ export const reconcileInput = z.strictObject({
   operationId: id,
 });
 export const recoveryInput = reconcileInput.extend({
-  walletOutcome: z.literal("REJECTED").optional(),
+  walletOutcome: z.enum(["REJECTED", "NOT_SUBMITTED"]).optional(),
 });
 export const confirmInput = reconcileInput.extend({
   transactionHash: z

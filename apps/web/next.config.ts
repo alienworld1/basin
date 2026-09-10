@@ -17,6 +17,7 @@ function getWebhookDevOrigin(): string[] {
 }
 
 const nextConfig: NextConfig = {
+  experimental: { useTypeScriptCli: false },
   allowedDevOrigins: getWebhookDevOrigin(),
   async headers() {
     return [

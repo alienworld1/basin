@@ -17,6 +17,11 @@ export type TreasurySummary = {
   routineLimit?: string;
   lastVerifiedAt?: string;
   errorCode?: string;
+  account?: {
+    address: string;
+    ethBalanceWei?: string;
+    balanceCheckedAt?: string;
+  };
   operation?: {
     id: string;
     step: string;
