@@ -53,10 +53,11 @@ const identity = {
   ens_name: "alice.basin.eth",
   identity_epoch: "0",
   controller_address: addr,
+  payee_id: digest,
 } as NonNullable<
   Awaited<ReturnType<Persistence["identities"]["findByWorkspace"]>>
 >;
-function harness() {
+function harness(options?: { active?: boolean; activationAvailable?: boolean }) {
   let operation: SettlementOperation | null = null;
   let failFinalize = false;
   let verifyError: SettlementError | null = null;
@@ -66,7 +67,7 @@ function harness() {
   const context = {
     relationship: {
       id: 3n,
-      status: "PENDING",
+      status: options?.active ? "ACTIVE" : "PENDING",
       relationship_name: prepared.scope.name,
     },
     generation: {
@@ -76,7 +77,21 @@ function harness() {
       expires_at: new Date(Date.now() + 60_000),
       ended_at: null,
     },
-    root: null,
+    root: options?.active
+      ? {
+          payee_id: digest,
+          identity_controller: addr,
+          identity_epoch: "0",
+          relationship_token_id: "4",
+          relationship_registry_address: addr,
+          resolver_proxy_address: addr,
+          resolver_implementation_address: addr,
+          resolver_implementation_code_hash: digest,
+          resolver_permission_profile_hash: digest,
+          registry_permission_profile_hash: digest,
+          security_root_commitment: digest,
+        }
+      : null,
     versions: [],
   };
   const read = async () =>
@@ -87,6 +102,10 @@ function harness() {
       tokenId: 4n,
       registry: addr,
       resolver: addr,
+      implementation: addr,
+      implementationCodeHash: digest,
+      resolverProfile: digest,
+      registryProfile: digest,
       identityEpoch: 0n,
       blockNumber: 14n,
       blockHash: digest,
@@ -181,7 +200,9 @@ function harness() {
   const service = createReceivingService(
     persistence,
     identity,
-    undefined,
+    options?.activationAvailable
+      ? async () => ({ commitment: digest, active: true })
+      : undefined,
     dependencies,
   );
   return {
@@ -200,6 +221,16 @@ function harness() {
     verificationCalls: () => verificationCalls,
   };
 }
+test("an active relationship uses the injected Router activation reader", async () => {
+  const unavailable = harness({ active: true });
+  const unavailableStatus = await unavailable.service.status(3n);
+  assert.equal(unavailableStatus.trust, "UNVERIFIED");
+
+  const verified = harness({ active: true, activationAvailable: true });
+  const verifiedStatus = await verified.service.status(3n);
+  assert.equal(verifiedStatus.trust, "SETTLEMENT_ONLY");
+  assert.equal(verifiedStatus.technical?.approvalVerified, true);
+});
 const key = "f7241e10-f9b1-4f6c-b1f0-443817c4d124";
 test("durable preparation encrypts before signing, claims once, and rejects stale review", async () => {
   const h = harness();

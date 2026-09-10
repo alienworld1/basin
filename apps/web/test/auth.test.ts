@@ -14,7 +14,10 @@ import {
   requireOrganizationRole,
   requireWorkspaceAccess,
 } from "../src/server/auth/authorization";
-import { normalizeVerifiedClaims } from "../src/server/auth/privy";
+import {
+  normalizePrivyVerificationKey,
+  normalizeVerifiedClaims,
+} from "../src/server/auth/privy";
 import { workspaceRequest } from "../src/server/auth/workspace-input";
 import { requestBootstrap } from "../src/ui/auth/bootstrap-client";
 
@@ -108,6 +111,17 @@ test("verified claims reject expired and wrong-app sessions", () => {
     normalizeVerifiedClaims(claims, "app-a", 1_000_000).privyUserId,
     claims.user_id,
   );
+});
+
+test("Privy dashboard verification keys are converted to PEM", () => {
+  const dashboardKey = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE";
+  assert.equal(
+    normalizePrivyVerificationKey(dashboardKey),
+    `-----BEGIN PUBLIC KEY-----\n${dashboardKey}\n-----END PUBLIC KEY-----`,
+  );
+
+  const pem = `-----BEGIN PUBLIC KEY-----\n${dashboardKey}\n-----END PUBLIC KEY-----`;
+  assert.equal(normalizePrivyVerificationKey(pem), pem);
 });
 
 test("workspace creation input is strict, trimmed, and bounded", () => {

@@ -60,7 +60,12 @@ export function connectRuntimeDatabase(connectionString: string) {
   const pools = runtimePools();
   let connection = pools.get(parsed.data);
   if (!connection) {
-    connection = createConnection(parsed.data, 1, 10000);
+    // The organization workspace loads several independent, read-only panels
+    // after bootstrap. One connection serializes those requests and can make
+    // callers exceed pg's connection-acquisition timeout. Keep this bounded
+    // for serverless processes while allowing the transaction pooler to serve
+    // the initial screen in parallel.
+    connection = createConnection(parsed.data, 5, 10000);
     pools.set(parsed.data, connection);
   }
   return {

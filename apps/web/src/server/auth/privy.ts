@@ -29,6 +29,29 @@ type VerifiedAccessClaims = {
   expiration: number;
 };
 
+/**
+ * Privy's dashboard provides the ES256 verification key as base64-encoded
+ * SubjectPublicKeyInfo. The Node SDK passes a configured key to jose's
+ * `importSPKI`, which requires PEM rather than the dashboard's raw value.
+ * Accept both forms so local configuration cannot make every valid session
+ * look like an invalid token.
+ */
+export function normalizePrivyVerificationKey(key: string) {
+  const value = key.trim();
+  if (value.includes("-----BEGIN PUBLIC KEY-----")) return value;
+
+  const der = Buffer.from(value, "base64");
+  if (!der.length || der.toString("base64") !== value.replace(/\s/g, "")) {
+    throw new AuthError(
+      "UNAVAILABLE",
+      "Privy authentication is not configured for this environment.",
+    );
+  }
+
+  const pemBody = der.toString("base64").match(/.{1,64}/g)?.join("\n");
+  return `-----BEGIN PUBLIC KEY-----\n${pemBody}\n-----END PUBLIC KEY-----`;
+}
+
 export function normalizeVerifiedClaims(
   claims: VerifiedAccessClaims,
   appId: string,
@@ -77,7 +100,9 @@ function getPrivyClient() {
   client ??= new PrivyClient({
     appId: environment.appId,
     appSecret: environment.appSecret,
-    jwtVerificationKey: environment.verificationKey,
+    jwtVerificationKey: environment.verificationKey
+      ? normalizePrivyVerificationKey(environment.verificationKey)
+      : undefined,
   });
   return { client, environment };
 }

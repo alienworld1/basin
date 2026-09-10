@@ -20,6 +20,7 @@ import {
   reconcileInput,
   recoveryInput,
 } from "./input";
+import { createRouterActivationReader } from "./activation";
 import { createReceivingService } from "./service";
 
 export async function receivingHandler(
@@ -92,7 +93,11 @@ export async function receivingHandler(
       workspace.id,
       identity.controller_address as `0x${string}`,
     );
-    const service = createReceivingService(persistence, identity);
+    const service = createReceivingService(
+      persistence,
+      identity,
+      createRouterActivationReader(),
+    );
     if (kind === "status") {
       const query = statusInput.parse(input);
       return noStoreJson(
