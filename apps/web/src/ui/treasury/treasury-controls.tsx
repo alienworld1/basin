@@ -11,6 +11,7 @@ import { authenticatedRequest } from "../auth/authenticated-request";
 import { useBasinAuth } from "../auth/auth-provider";
 import { Button } from "../button";
 import { TreasurySetupReview } from "./treasury-setup-review";
+import { TreasuryWalletSummary } from "./treasury-wallet-summary";
 
 const setupKey = (workspaceId: string) => `basin:treasury-setup:${workspaceId}`;
 
@@ -246,6 +247,9 @@ export function TreasuryControls({
           </div>
         </animated.div>
       )}
+      {result?.summary.account ? (
+        <TreasuryWalletSummary account={result.summary.account} />
+      ) : null}
       {requestError ? (
         <p className="mt-5 text-sm text-state-danger" role="alert">
           {requestError}

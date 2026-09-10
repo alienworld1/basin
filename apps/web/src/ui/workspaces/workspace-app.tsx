@@ -18,12 +18,15 @@ import type {
 } from "../shell-types";
 import type { IdentityTechnicalDetails } from "../../shared/identity-types";
 import type { TreasuryTechnicalDetails } from "../../shared/treasury-types";
+import type { RelationshipTechnicalDetails } from "../../shared/approved-payee-types";
 import { ActiveWorkspace } from "./active-workspace";
 import { WorkspaceChooser } from "./workspace-chooser";
 import { WorkspaceOnboarding } from "./workspace-onboarding";
 
 type WorkspaceAppProps = {
   requestedWorkspaceId?: string;
+  requestedRelationshipId?: string;
+  requestedReceivingRelationshipId?: string;
   navigation: NavigationItem[];
   inspectorDetails: InspectorDetails;
 };
@@ -40,6 +43,8 @@ function isWorkspaceId(value: string) {
 
 export function WorkspaceApp({
   requestedWorkspaceId,
+  requestedRelationshipId,
+  requestedReceivingRelationshipId,
   navigation,
   inspectorDetails,
 }: WorkspaceAppProps) {
@@ -65,6 +70,9 @@ export function WorkspaceApp({
   const [treasuryDetails, setTreasuryDetails] =
     useState<TreasuryTechnicalDetails>();
   const [treasuryPending, setTreasuryPending] = useState(false);
+  const [relationshipDetails, setRelationshipDetails] =
+    useState<RelationshipTechnicalDetails>();
+  const [relationshipPending, setRelationshipPending] = useState(false);
   const handleIdentityDetails = useCallback(
     (details: IdentityTechnicalDetails | undefined) =>
       setIdentityDetails(details),
@@ -81,6 +89,14 @@ export function WorkspaceApp({
   );
   const handleTreasuryPending = useCallback(
     (pending: boolean) => setTreasuryPending(pending),
+    [],
+  );
+  const handleRelationshipDetails = useCallback(
+    (details: RelationshipTechnicalDetails) => setRelationshipDetails(details),
+    [],
+  );
+  const handleRelationshipPending = useCallback(
+    (pending: boolean) => setRelationshipPending(pending),
     [],
   );
   const handleSessionEnded = useCallback(() => setStatus("session-ended"), []);
@@ -156,11 +172,11 @@ export function WorkspaceApp({
 
   const choose = async (workspace: WorkspaceSummary, justCreated = false) => {
     if (
-      (identityPending || treasuryPending) &&
+      (identityPending || treasuryPending || relationshipPending) &&
       activeWorkspace &&
       workspace.id !== activeWorkspace.id &&
       !window.confirm(
-        `${treasuryPending ? "Your treasury approval" : "Your identity claim"} may continue while you switch workspaces. Switch anyway?`,
+        `${relationshipPending ? "Your relationship action" : treasuryPending ? "Your treasury approval" : "Your identity claim"} may continue while you switch workspaces. Switch anyway?`,
       )
     ) {
       return false;
@@ -189,6 +205,8 @@ export function WorkspaceApp({
       setIdentityPending(false);
       setTreasuryDetails(undefined);
       setTreasuryPending(false);
+      setRelationshipDetails(undefined);
+      setRelationshipPending(false);
       setSelectedOverride({ id: workspace.id, from: requestedWorkspaceId });
       startNavigation(() => router.replace(`/app?workspace=${workspace.id}`));
       return true;
@@ -346,11 +364,15 @@ export function WorkspaceApp({
       <ActiveWorkspace
         key={activeWorkspace.id}
         workspace={activeWorkspace}
+        requestedRelationshipId={requestedRelationshipId}
+        requestedReceivingRelationshipId={requestedReceivingRelationshipId}
         userId={result!.user.id}
         onIdentityDetailsChange={handleIdentityDetails}
         onPendingChange={handleIdentityPending}
         onTreasuryDetailsChange={handleTreasuryDetails}
         onTreasuryPendingChange={handleTreasuryPending}
+        onRelationshipDetailsChange={handleRelationshipDetails}
+        onRelationshipPendingChange={handleRelationshipPending}
         onSessionEnded={handleSessionEnded}
         onAccessChanged={recoverWorkspaceAccess}
       />
@@ -369,6 +391,7 @@ export function WorkspaceApp({
       switchingWorkspace={isNavigating || resolvingWorkspace}
       identityDetails={identityDetails}
       treasuryDetails={treasuryDetails}
+      relationshipDetails={relationshipDetails}
     >
       {content}
     </AppShell>

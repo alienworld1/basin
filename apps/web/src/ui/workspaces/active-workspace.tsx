@@ -10,18 +10,26 @@ import { PersonalIdentity } from "../identities/personal-identity";
 import type { TreasuryTechnicalDetails } from "../../shared/treasury-types";
 import { TreasuryControls } from "../treasury/treasury-controls";
 import { PaymentAccess } from "../payment-access/payment-access";
+import { ApprovedPayees } from "../approved-payees/approved-payees";
+import type { RelationshipTechnicalDetails } from "../../shared/approved-payee-types";
 
 export function ActiveWorkspace({
   workspace,
+  requestedRelationshipId,
+  requestedReceivingRelationshipId,
   userId,
   onIdentityDetailsChange,
   onPendingChange,
   onTreasuryDetailsChange,
   onTreasuryPendingChange,
+  onRelationshipDetailsChange,
+  onRelationshipPendingChange,
   onSessionEnded,
   onAccessChanged,
 }: {
   workspace: WorkspaceSummary;
+  requestedRelationshipId?: string;
+  requestedReceivingRelationshipId?: string;
   userId: string;
   onIdentityDetailsChange: (
     details: IdentityTechnicalDetails | undefined,
@@ -31,6 +39,8 @@ export function ActiveWorkspace({
     details: TreasuryTechnicalDetails | undefined,
   ) => void;
   onTreasuryPendingChange: (pending: boolean) => void;
+  onRelationshipDetailsChange: (details: RelationshipTechnicalDetails) => void;
+  onRelationshipPendingChange: (pending: boolean) => void;
   onSessionEnded: () => void;
   onAccessChanged: () => Promise<void>;
 }) {
@@ -56,8 +66,16 @@ export function ActiveWorkspace({
         <PersonalIdentity
           userId={userId}
           workspace={workspace}
+          requestedReceivingRelationshipId={requestedReceivingRelationshipId}
           onIdentityDetailsChange={onIdentityDetailsChange}
           onPendingChange={onPendingChange}
+        />
+        <ApprovedPayees
+          workspace={workspace}
+          requestedRelationshipId={requestedRelationshipId}
+          onTechnicalDetailsChange={onRelationshipDetailsChange}
+          onPendingChange={onRelationshipPendingChange}
+          onSessionEnded={onSessionEnded}
         />
       </section>
     );
@@ -87,6 +105,13 @@ export function ActiveWorkspace({
           workspace={workspace}
           onSessionEnded={onSessionEnded}
           onAccessChanged={onAccessChanged}
+        />
+        <ApprovedPayees
+          workspace={workspace}
+          requestedRelationshipId={requestedRelationshipId}
+          onTechnicalDetailsChange={onRelationshipDetailsChange}
+          onPendingChange={onRelationshipPendingChange}
+          onSessionEnded={onSessionEnded}
         />
       </section>
     );

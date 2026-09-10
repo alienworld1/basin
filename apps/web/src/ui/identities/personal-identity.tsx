@@ -29,6 +29,7 @@ import {
 type PersonalIdentityProps = {
   userId: string;
   workspace: WorkspaceSummary;
+  requestedReceivingRelationshipId?: string;
   onIdentityDetailsChange: (
     details: IdentityTechnicalDetails | undefined,
   ) => void;
@@ -53,6 +54,7 @@ type ErrorState = {
 export function PersonalIdentity({
   userId,
   workspace,
+  requestedReceivingRelationshipId,
   onIdentityDetailsChange,
   onPendingChange,
 }: PersonalIdentityProps) {
@@ -394,6 +396,7 @@ export function PersonalIdentity({
         identity={identity}
         justVerified={justVerified}
         workspaceId={workspace.id}
+        requestedReceivingRelationshipId={requestedReceivingRelationshipId}
         onReceivingChange={handleReceiving}
       />
     );

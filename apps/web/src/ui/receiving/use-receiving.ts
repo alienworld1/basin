@@ -16,11 +16,14 @@ import {
 export function useReceiving(
   workspaceId: string,
   onDetailsChange: (details: ReceivingStatusDto) => void,
+  requestedRelationshipId?: string,
 ) {
   const auth = useBasinAuth();
   const send = useReceivingWallet();
   const [details, setDetails] = useState<ReceivingStatusDto | null>(null);
-  const [relationship, setRelationship] = useState<string | null>(null);
+  const [relationship, setRelationship] = useState<string | null>(
+    requestedRelationshipId ?? null,
+  );
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -115,7 +118,7 @@ export function useReceiving(
     if (
       !pendingId ||
       !pendingStatus ||
-      !["SUBMITTED", "VERIFYING", "UNKNOWN"].includes(pendingStatus)
+      !["SUBMITTED", "VERIFYING"].includes(pendingStatus)
     )
       return;
     let stopped = false;
@@ -141,6 +144,32 @@ export function useReceiving(
       clearTimeout(timer);
     };
   }, [pendingId, pendingStatus, load]);
+  useEffect(() => {
+    if (!pendingId || pendingStatus !== "UNKNOWN") return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const started = Date.now();
+    const check = () => {
+      timer = setTimeout(async () => {
+        if (stopped) return;
+        try {
+          await request("/api/settlement/reconcile", {
+            workspaceId,
+            operationId: pendingId,
+          });
+          if (!stopped) await load();
+        } catch {
+          // Keep the durable waiting state; the manual status action remains available.
+        }
+        if (!stopped && Date.now() - started < 120_000) check();
+      }, 15_000);
+    };
+    check();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [pendingId, pendingStatus, load, request, workspaceId]);
   const transitions = useTransition(
     details?.current ?? details?.preference ?? null,
     {
@@ -189,8 +218,8 @@ export function useReceiving(
     setBusy(true);
     setError(null);
     let operationId: string | null = null;
-    let walletRejected = false;
-    let walletIssued = false;
+    let walletOutcome: "REJECTED" | "NOT_SUBMITTED" | null = null;
+    let authorizationStarted = false;
     let walletMessage: string | null = null;
     try {
       if (!details.relationshipId) {
@@ -216,16 +245,18 @@ export function useReceiving(
           "/api/settlement/authorize",
           { workspaceId, operationId },
         );
-        walletIssued = true;
+        authorizationStarted = true;
         if (!mounted.current) return;
-        setProgress("Confirm the change in your wallet.");
+        setProgress("Authorizing with your Basin account…");
         let hash: `0x${string}`;
         try {
           ({ hash } = await send(prepared));
         } catch (caught) {
-          walletRejected =
+          walletOutcome =
             caught instanceof ReceivingWalletError &&
-            caught.code === "REJECTED";
+            caught.code !== "UNKNOWN"
+              ? caught.code
+              : null;
           walletMessage =
             caught instanceof ReceivingWalletError ? caught.message : null;
           throw caught;
@@ -245,26 +276,33 @@ export function useReceiving(
       await load();
     } catch (caught) {
       if (!mounted.current) return;
+      const awaitingResult = Boolean(
+        operationId &&
+          authorizationStarted &&
+          (!walletMessage ||
+            (caught instanceof ReceivingWalletError &&
+              caught.code === "UNKNOWN")),
+      );
       setError(
-        (caught as Error).message?.startsWith("0x")
-          ? "We couldn't complete the change. Check again."
-          : operationId && walletIssued
-            ? "We couldn't confirm the result yet. Check again before trying another change."
+        awaitingResult
+          ? null
+          : (caught as Error).message?.startsWith("0x")
+            ? "We couldn't complete the change. Check again."
             : (caught as Error).message,
       );
-      if (operationId && walletIssued) {
+      if (operationId && authorizationStarted) {
         try {
           await request("/api/settlement/reconcile", {
             workspaceId,
             operationId,
-            ...(walletRejected ? { walletOutcome: "REJECTED" } : {}),
+            ...(walletOutcome ? { walletOutcome } : {}),
           });
         } catch {
           /* The server journal retains the operation for the next authorized read. */
         }
         setOpen(false);
         await load();
-        if (walletMessage) setError(walletMessage);
+        if (walletMessage && !awaitingResult) setError(walletMessage);
       }
     } finally {
       submitting.current = false;

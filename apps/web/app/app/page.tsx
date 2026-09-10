@@ -21,6 +21,20 @@ export default async function WorkspacePage({
       : Array.isArray(workspaceQuery)
         ? "invalid"
         : undefined;
+  const relationshipQuery = query.relationship;
+  const requestedRelationshipId =
+    typeof relationshipQuery === "string"
+      ? relationshipQuery
+      : Array.isArray(relationshipQuery)
+        ? "invalid"
+        : undefined;
+  const receivingQuery = query.receiving;
+  const requestedReceivingRelationshipId =
+    typeof receivingQuery === "string"
+      ? receivingQuery
+      : Array.isArray(receivingQuery)
+        ? "invalid"
+        : undefined;
   const health = getEnvironmentHealth();
   const inspectorDetails: InspectorDetails = {
     environment: health.environment,
@@ -33,6 +47,8 @@ export default async function WorkspacePage({
   return (
     <WorkspaceApp
       requestedWorkspaceId={requestedWorkspaceId}
+      requestedRelationshipId={requestedRelationshipId}
+      requestedReceivingRelationshipId={requestedReceivingRelationshipId}
       navigation={navigation}
       inspectorDetails={inspectorDetails}
     />

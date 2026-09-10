@@ -11,6 +11,7 @@ type IdentityHomeProps = {
   identity: ActiveIdentityDto;
   justVerified: boolean;
   workspaceId: string;
+  requestedReceivingRelationshipId?: string;
   onReceivingChange: (
     details: import("../../shared/settlement-types").ReceivingStatusDto,
   ) => void;
@@ -20,6 +21,7 @@ export function IdentityHome({
   identity,
   justVerified,
   workspaceId,
+  requestedReceivingRelationshipId,
   onReceivingChange,
 }: IdentityHomeProps) {
   const reducedMotion = useReducedMotion();
@@ -77,8 +79,9 @@ export function IdentityHome({
         </span>
       </div>
       <Receiving
-        key={workspaceId}
+        key={`${workspaceId}:${requestedReceivingRelationshipId ?? "default"}`}
         workspaceId={workspaceId}
+        requestedRelationshipId={requestedReceivingRelationshipId}
         onDetailsChange={onReceivingChange}
       />
     </section>

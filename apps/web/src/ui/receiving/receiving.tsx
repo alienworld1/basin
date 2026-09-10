@@ -1,17 +1,21 @@
 "use client";
 import { animated } from "@react-spring/web";
+import { useRouter } from "next/navigation";
 import type { ReceivingStatusDto } from "../../shared/settlement-types";
 import { Button } from "../button";
 import { Sheet } from "../sheet";
 import { ReceivingReview } from "./receiving-review";
 import { ReceivingHistory } from "./receiving-history";
+import { ReceivingPendingStatus } from "./receiving-pending-status";
 import { useReceiving } from "./use-receiving";
 
 export function Receiving({
   workspaceId,
+  requestedRelationshipId,
   onDetailsChange,
 }: {
   workspaceId: string;
+  requestedRelationshipId?: string;
   onDetailsChange: (details: ReceivingStatusDto) => void;
 }) {
   const {
@@ -37,7 +41,8 @@ export function Receiving({
     open,
     prepareReview,
     confirm,
-  } = useReceiving(workspaceId, onDetailsChange);
+  } = useReceiving(workspaceId, onDetailsChange, requestedRelationshipId);
+  const router = useRouter();
   return (
     <section
       className="mt-8 max-w-xl border-t border-line pt-8"
@@ -95,7 +100,12 @@ export function Receiving({
               </p>
             ) : null}
             <p className="font-medium">
-              {details.status === "SAVED"
+              {details.pending &&
+              ["SUBMITTED", "VERIFYING", "UNKNOWN"].includes(
+                details.pending.status,
+              )
+                ? "Receiving change in progress"
+                : details.status === "SAVED"
                 ? "Receiving account saved"
                 : details.status === "VERIFIED"
                   ? `Receiving version ${details.current?.epoch}`
@@ -119,40 +129,39 @@ export function Receiving({
               {details.message}
             </p>
             {details.pending ? (
-              <div className="mt-4 space-y-3">
-                <p className="text-sm">{details.pending.message}</p>
-                {details.pending.transactionHash ? (
-                  <a
-                    className="focus-ring inline-flex min-h-11 items-center text-sm underline"
-                    href={`https://sepolia.etherscan.io/tx/${details.pending.transactionHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View transaction
-                  </a>
-                ) : null}
-                {details.pending.status !== "PREPARED" ? (
-                  <Button
-                    disabled={busy}
-                    onClick={async () => {
-                      setBusy(true);
-                      try {
-                        await request("/api/settlement/reconcile", {
-                          workspaceId,
-                          operationId: details.pending!.id,
-                        });
-                        await load();
-                      } catch (caught) {
-                        setError((caught as Error).message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    Check again
-                  </Button>
-                ) : null}
-              </div>
+              <ReceivingPendingStatus
+                operation={details.pending}
+                busy={busy}
+                onCheck={async () => {
+                  setBusy(true);
+                  try {
+                    await request("/api/settlement/reconcile", {
+                      workspaceId,
+                      operationId: details.pending!.id,
+                    });
+                    await load();
+                  } catch (caught) {
+                    setError((caught as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                onStartOver={async () => {
+                  setBusy(true);
+                  try {
+                    await request("/api/settlement/reconcile", {
+                      workspaceId,
+                      operationId: details.pending!.id,
+                      walletOutcome: "NOT_SUBMITTED",
+                    });
+                    await load();
+                  } catch (caught) {
+                    setError((caught as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
             ) : null}
             {details.prepared && details.pending ? (
               <div className="mt-4 flex flex-wrap gap-3">
@@ -188,9 +197,13 @@ export function Receiving({
                 disabled={busy || auth.walletStatus !== "READY"}
                 onClick={openReview}
               >
-                {details.current || details.preference
-                  ? "Change receiving account"
-                  : "Set up receiving"}
+                {details.relationshipId
+                  ? details.current
+                    ? "Change receiving account"
+                    : "Set up receiving"
+                  : details.preference
+                    ? "Change receiving account"
+                    : "Set up receiving"}
               </Button>
             ) : !details.pending ? (
               <Button className="mt-6" onClick={() => void load()}>
@@ -203,6 +216,20 @@ export function Receiving({
               </p>
             ) : null}
             <ReceivingHistory versions={details.history} />
+            {requestedRelationshipId &&
+            details.relationshipId === requestedRelationshipId ? (
+              <Button
+                className="mt-6"
+                disabled={busy || Boolean(details.pending)}
+                onClick={() =>
+                  router.push(
+                    `/app?workspace=${workspaceId}&relationship=${requestedRelationshipId}`,
+                  )
+                }
+              >
+                Return to relationship
+              </Button>
+            ) : null}
           </>
         ) : null}
         {progress ? <p className="mt-4 text-sm">{progress}</p> : null}

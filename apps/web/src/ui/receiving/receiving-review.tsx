@@ -98,6 +98,16 @@ export function ReceivingReview({
                 details for this relationship. Completed payments keep their
                 original details.
               </p>
+              <div className="border-t border-line pt-4">
+                <p className="text-sm font-medium">Your Basin account</p>
+                <p className="mt-1 text-sm text-ink-secondary">
+                  Your signed-in Privy account authorizes this change directly.
+                  You do not need to connect an external wallet.
+                </p>
+                <p className="mt-2 wrap-anywhere font-mono text-xs text-ink-secondary">
+                  {prepared?.transaction.from}
+                </p>
+              </div>
             </>
           ) : (
             <p className="text-sm text-ink-secondary">

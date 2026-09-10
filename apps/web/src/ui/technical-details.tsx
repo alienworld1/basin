@@ -6,17 +6,21 @@ import type { IdentityTechnicalDetails as IdentityDetails } from "../shared/iden
 import { IdentityTechnicalDetails } from "./identities/identity-technical-details";
 import type { TreasuryTechnicalDetails as TreasuryDetails } from "../shared/treasury-types";
 import { TreasuryTechnicalDetails } from "./treasury/treasury-technical-details";
+import type { RelationshipTechnicalDetails as RelationshipDetails } from "../shared/approved-payee-types";
+import { RelationshipTechnicalDetails } from "./approved-payees/relationship-technical-details";
 
 type TechnicalDetailsProps = {
   details: InspectorDetails;
   identityDetails?: IdentityDetails;
   treasuryDetails?: TreasuryDetails;
+  relationshipDetails?: RelationshipDetails;
 };
 
 export function TechnicalDetails({
   details,
   identityDetails,
   treasuryDetails,
+  relationshipDetails,
 }: TechnicalDetailsProps) {
   return (
     <>
@@ -47,13 +51,18 @@ export function TechnicalDetails({
           }
         />
       </InspectorSection>
+      {relationshipDetails ? (
+        <RelationshipTechnicalDetails details={relationshipDetails} />
+      ) : null}
       {identityDetails ? (
         <IdentityTechnicalDetails details={identityDetails} />
       ) : null}
       {identityDetails?.receiving ? (
         <ReceivingEvidence details={identityDetails.receiving} />
       ) : null}
-      {treasuryDetails ? <TreasuryTechnicalDetails details={treasuryDetails} /> : null}
+      {treasuryDetails ? (
+        <TreasuryTechnicalDetails details={treasuryDetails} />
+      ) : null}
     </>
   );
 }
