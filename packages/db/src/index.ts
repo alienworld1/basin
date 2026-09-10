@@ -9,12 +9,16 @@ import { paymentRepository } from "./repositories/payments";
 import { receiptRepository } from "./repositories/receipts";
 import { treasuryRepository } from "./repositories/treasury";
 import { paymentAccessRepository } from "./repositories/payment-access";
+import { approvedPayeeRepository } from "./repositories/approved-payees";
 export { databaseHealth } from "./health";
 export type { DatabaseHealth } from "./health";
 export type * from "./evidence";
 export {
   attestInitialIdentity,
   attestSettlementVersion,
+  attestGeneration,
+  attestActivation,
+  attestRelationshipEnd,
 } from "./evidence-registry";
 
 export function createPersistence(connectionString: string) {
@@ -29,6 +33,7 @@ export function createPersistence(connectionString: string) {
     receipts: receiptRepository(connection.db),
     treasury: treasuryRepository(connection.db),
     paymentAccess: paymentAccessRepository(connection.db),
+    approvedPayees: approvedPayeeRepository(connection.db),
     close: connection.close,
   };
 }

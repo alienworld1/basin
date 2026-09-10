@@ -1,0 +1,5768 @@
+{
+  "id": "a2b5ee4a-6ae4-42cd-8541-92bba84eadf5",
+  "prevId": "505a9021-ef35-480b-825d-33ece59a8502",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "basin.user": {
+      "name": "user",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "user_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "privy_user_id": {
+          "name": "privy_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_privy_user_id_unique": {
+          "name": "user_privy_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "privy_user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "user_privy_user_id_length": {
+          "name": "user_privy_user_id_length",
+          "value": "length(\"basin\".\"user\".\"privy_user_id\") between 1 and 240"
+        },
+        "user_display_name_length": {
+          "name": "user_display_name_length",
+          "value": "length(\"basin\".\"user\".\"display_name\") <= 120 and length(btrim(\"basin\".\"user\".\"display_name\")) > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.workspace": {
+      "name": "workspace",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "workspace_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "type": {
+          "name": "type",
+          "type": "workspace_type",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_user_id": {
+          "name": "owner_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workspace_owner_user_id_index": {
+          "name": "workspace_owner_user_id_index",
+          "columns": [
+            {
+              "expression": "owner_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workspace_owner_user_id_user_id_fk": {
+          "name": "workspace_owner_user_id_user_id_fk",
+          "tableFrom": "workspace",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "owner_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workspace_display_name_length": {
+          "name": "workspace_display_name_length",
+          "value": "length(\"basin\".\"workspace\".\"display_name\") <= 120 and length(btrim(\"basin\".\"workspace\".\"display_name\")) > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.organization": {
+      "name": "organization",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "organization_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "privy_organization_id": {
+          "name": "privy_organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "basin_identity_id": {
+          "name": "basin_identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_workspace_id_workspace_id_fk": {
+          "name": "organization_workspace_id_workspace_id_fk",
+          "tableFrom": "organization",
+          "tableTo": "workspace",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_basin_identity_id_basin_identity_id_fk": {
+          "name": "organization_basin_identity_id_basin_identity_id_fk",
+          "tableFrom": "organization",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "basin_identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_workspace_id_unique": {
+          "name": "organization_workspace_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id"
+          ]
+        },
+        "organization_privy_organization_id_unique": {
+          "name": "organization_privy_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "privy_organization_id"
+          ]
+        },
+        "organization_basin_identity_id_unique": {
+          "name": "organization_basin_identity_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "basin_identity_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_privy_organization_id_length": {
+          "name": "organization_privy_organization_id_length",
+          "value": "length(\"basin\".\"organization\".\"privy_organization_id\") between 1 and 240"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.organization_member": {
+      "name": "organization_member",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "organization_member_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "member_role",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "member_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ACTIVE'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removed_by_user_id": {
+          "name": "removed_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "left_at": {
+          "name": "left_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organization_member_user_id_status_index": {
+          "name": "organization_member_user_id_status_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organization_member_organization_id_organization_id_fk": {
+          "name": "organization_member_organization_id_organization_id_fk",
+          "tableFrom": "organization_member",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_member_user_id_user_id_fk": {
+          "name": "organization_member_user_id_user_id_fk",
+          "tableFrom": "organization_member",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_member_removed_by_user_id_user_id_fk": {
+          "name": "organization_member_removed_by_user_id_user_id_fk",
+          "tableFrom": "organization_member",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "removed_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_member_organization_id_user_id_unique": {
+          "name": "organization_member_organization_id_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_member_lifecycle": {
+          "name": "organization_member_lifecycle",
+          "value": "(\"basin\".\"organization_member\".\"status\" = 'ACTIVE' and \"basin\".\"organization_member\".\"removed_at\" is null and \"basin\".\"organization_member\".\"removed_by_user_id\" is null and \"basin\".\"organization_member\".\"left_at\" is null) or (\"basin\".\"organization_member\".\"status\" = 'REMOVED' and \"basin\".\"organization_member\".\"removed_at\" is not null and \"basin\".\"organization_member\".\"removed_by_user_id\" is not null and \"basin\".\"organization_member\".\"left_at\" is null) or (\"basin\".\"organization_member\".\"status\" = 'LEFT' and \"basin\".\"organization_member\".\"left_at\" is not null and \"basin\".\"organization_member\".\"removed_at\" is null and \"basin\".\"organization_member\".\"removed_by_user_id\" is null)"
+        },
+        "organization_admin_stays_active": {
+          "name": "organization_admin_stays_active",
+          "value": "\"basin\".\"organization_member\".\"role\" != 'ADMIN' or \"basin\".\"organization_member\".\"status\" = 'ACTIVE'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.invitation_operation": {
+      "name": "invitation_operation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "invitation_operation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation_type": {
+          "name": "operation_type",
+          "type": "invitation_operation_type",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invitation_id": {
+          "name": "invitation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invitation_operation_organization_id_organization_id_fk": {
+          "name": "invitation_operation_organization_id_organization_id_fk",
+          "tableFrom": "invitation_operation",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "invitation_operation_actor_user_id_user_id_fk": {
+          "name": "invitation_operation_actor_user_id_user_id_fk",
+          "tableFrom": "invitation_operation",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "invitation_operation_invitation_id_organization_invitation_id_fk": {
+          "name": "invitation_operation_invitation_id_organization_invitation_id_fk",
+          "tableFrom": "invitation_operation",
+          "tableTo": "organization_invitation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "invitation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invitation_operation_organization_id_actor_user_id_operation_type_idempotency_key_unique": {
+          "name": "invitation_operation_organization_id_actor_user_id_operation_type_idempotency_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "actor_user_id",
+            "operation_type",
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "invitation_operation_idempotency_length": {
+          "name": "invitation_operation_idempotency_length",
+          "value": "length(\"basin\".\"invitation_operation\".\"idempotency_key\") between 16 and 160"
+        },
+        "invitation_operation_fingerprint": {
+          "name": "invitation_operation_fingerprint",
+          "value": "\"basin\".\"invitation_operation\".\"request_fingerprint\" ~ '^0x[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.organization_access_event": {
+      "name": "organization_access_event",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "organization_access_event_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invitation_id": {
+          "name": "invitation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subject_user_id": {
+          "name": "subject_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "organization_access_event_type",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organization_access_event_organization_id_created_at_index": {
+          "name": "organization_access_event_organization_id_created_at_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organization_access_event_organization_id_organization_id_fk": {
+          "name": "organization_access_event_organization_id_organization_id_fk",
+          "tableFrom": "organization_access_event",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_access_event_membership_id_organization_member_id_fk": {
+          "name": "organization_access_event_membership_id_organization_member_id_fk",
+          "tableFrom": "organization_access_event",
+          "tableTo": "organization_member",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "membership_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_access_event_invitation_id_organization_invitation_id_fk": {
+          "name": "organization_access_event_invitation_id_organization_invitation_id_fk",
+          "tableFrom": "organization_access_event",
+          "tableTo": "organization_invitation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "invitation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_access_event_actor_user_id_user_id_fk": {
+          "name": "organization_access_event_actor_user_id_user_id_fk",
+          "tableFrom": "organization_access_event",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_access_event_subject_user_id_user_id_fk": {
+          "name": "organization_access_event_subject_user_id_user_id_fk",
+          "tableFrom": "organization_access_event",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "subject_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "organization_access_event_reference": {
+          "name": "organization_access_event_reference",
+          "value": "\"basin\".\"organization_access_event\".\"membership_id\" is not null or \"basin\".\"organization_access_event\".\"invitation_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.organization_invitation": {
+      "name": "organization_invitation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "organization_invitation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "member_role",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PAYMENT_OPERATOR'"
+        },
+        "invitee_label": {
+          "name": "invitee_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "secret_version": {
+          "name": "secret_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "secret_hash": {
+          "name": "secret_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "organization_invitation_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by_user_id": {
+          "name": "created_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_by_user_id": {
+          "name": "accepted_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_by_user_id": {
+          "name": "revoked_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organization_invitation_organization_id_status_created_at_index": {
+          "name": "organization_invitation_organization_id_status_created_at_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organization_invitation_organization_id_organization_id_fk": {
+          "name": "organization_invitation_organization_id_organization_id_fk",
+          "tableFrom": "organization_invitation",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_invitation_created_by_user_id_user_id_fk": {
+          "name": "organization_invitation_created_by_user_id_user_id_fk",
+          "tableFrom": "organization_invitation",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "created_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_invitation_accepted_by_user_id_user_id_fk": {
+          "name": "organization_invitation_accepted_by_user_id_user_id_fk",
+          "tableFrom": "organization_invitation",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "accepted_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_invitation_revoked_by_user_id_user_id_fk": {
+          "name": "organization_invitation_revoked_by_user_id_user_id_fk",
+          "tableFrom": "organization_invitation",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "revoked_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_invitation_secret_hash_unique": {
+          "name": "organization_invitation_secret_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "secret_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_invitation_role": {
+          "name": "organization_invitation_role",
+          "value": "\"basin\".\"organization_invitation\".\"role\" = 'PAYMENT_OPERATOR'"
+        },
+        "organization_invitation_label_length": {
+          "name": "organization_invitation_label_length",
+          "value": "length(\"basin\".\"organization_invitation\".\"invitee_label\") between 1 and 120 and \"basin\".\"organization_invitation\".\"invitee_label\" = btrim(\"basin\".\"organization_invitation\".\"invitee_label\")"
+        },
+        "organization_invitation_secret": {
+          "name": "organization_invitation_secret",
+          "value": "\"basin\".\"organization_invitation\".\"secret_version\" between 1 and 32767 and \"basin\".\"organization_invitation\".\"secret_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "organization_invitation_lifecycle": {
+          "name": "organization_invitation_lifecycle",
+          "value": "(\"basin\".\"organization_invitation\".\"status\" in ('PENDING', 'EXPIRED') and \"basin\".\"organization_invitation\".\"accepted_by_user_id\" is null and \"basin\".\"organization_invitation\".\"accepted_at\" is null and \"basin\".\"organization_invitation\".\"revoked_by_user_id\" is null and \"basin\".\"organization_invitation\".\"revoked_at\" is null) or (\"basin\".\"organization_invitation\".\"status\" = 'ACCEPTED' and \"basin\".\"organization_invitation\".\"accepted_by_user_id\" is not null and \"basin\".\"organization_invitation\".\"accepted_at\" is not null and \"basin\".\"organization_invitation\".\"revoked_by_user_id\" is null and \"basin\".\"organization_invitation\".\"revoked_at\" is null) or (\"basin\".\"organization_invitation\".\"status\" = 'REVOKED' and \"basin\".\"organization_invitation\".\"accepted_by_user_id\" is null and \"basin\".\"organization_invitation\".\"accepted_at\" is null and \"basin\".\"organization_invitation\".\"revoked_by_user_id\" is not null and \"basin\".\"organization_invitation\".\"revoked_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.basin_identity": {
+      "name": "basin_identity",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "basin_identity_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payee_id": {
+          "name": "payee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ens_name": {
+          "name": "ens_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_epoch": {
+          "name": "identity_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "controller_address": {
+          "name": "controller_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_address": {
+          "name": "resolver_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "protocol_status": {
+          "name": "protocol_status",
+          "type": "identity_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "basin_identity_workspace_id_workspace_id_fk": {
+          "name": "basin_identity_workspace_id_workspace_id_fk",
+          "tableFrom": "basin_identity",
+          "tableTo": "workspace",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "basin_identity_workspace_id_unique": {
+          "name": "basin_identity_workspace_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id"
+          ]
+        },
+        "basin_identity_payee_id_unique": {
+          "name": "basin_identity_payee_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "payee_id"
+          ]
+        },
+        "basin_identity_ens_name_unique": {
+          "name": "basin_identity_ens_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "ens_name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "basin_identity_payee_id_shape": {
+          "name": "basin_identity_payee_id_shape",
+          "value": "\"basin\".\"basin_identity\".\"payee_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "basin_identity_identity_epoch_range": {
+          "name": "basin_identity_identity_epoch_range",
+          "value": "\"basin\".\"basin_identity\".\"identity_epoch\" >= 0"
+        },
+        "basin_identity_controller_address_shape": {
+          "name": "basin_identity_controller_address_shape",
+          "value": "\"basin\".\"basin_identity\".\"controller_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "basin_identity_resolver_address_shape": {
+          "name": "basin_identity_resolver_address_shape",
+          "value": "\"basin\".\"basin_identity\".\"resolver_address\" ~ '^0x[0-9a-f]{40}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.identity_authority_version": {
+      "name": "identity_authority_version",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "identity_authority_version_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "basin_identity_id": {
+          "name": "basin_identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_epoch": {
+          "name": "identity_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "controller_address": {
+          "name": "controller_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_resolver_address": {
+          "name": "identity_resolver_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence_transaction_hash": {
+          "name": "evidence_transaction_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence_block_number": {
+          "name": "evidence_block_number",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "identity_authority_version_basin_identity_id_index": {
+          "name": "identity_authority_version_basin_identity_id_index",
+          "columns": [
+            {
+              "expression": "basin_identity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"basin\".\"identity_authority_version\".\"superseded_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "identity_authority_version_basin_identity_id_basin_identity_id_fk": {
+          "name": "identity_authority_version_basin_identity_id_basin_identity_id_fk",
+          "tableFrom": "identity_authority_version",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "basin_identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "identity_authority_version_basin_identity_id_identity_epoch_unique": {
+          "name": "identity_authority_version_basin_identity_id_identity_epoch_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "basin_identity_id",
+            "identity_epoch"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "identity_authority_version_identity_epoch_range": {
+          "name": "identity_authority_version_identity_epoch_range",
+          "value": "\"basin\".\"identity_authority_version\".\"identity_epoch\" >= 0"
+        },
+        "identity_authority_version_controller_address_shape": {
+          "name": "identity_authority_version_controller_address_shape",
+          "value": "\"basin\".\"identity_authority_version\".\"controller_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "identity_authority_version_identity_resolver_address_shape": {
+          "name": "identity_authority_version_identity_resolver_address_shape",
+          "value": "\"basin\".\"identity_authority_version\".\"identity_resolver_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "identity_authority_version_evidence_transaction_hash_shape": {
+          "name": "identity_authority_version_evidence_transaction_hash_shape",
+          "value": "\"basin\".\"identity_authority_version\".\"evidence_transaction_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "identity_authority_version_evidence_block_number_range": {
+          "name": "identity_authority_version_evidence_block_number_range",
+          "value": "\"basin\".\"identity_authority_version\".\"evidence_block_number\" >= 0"
+        },
+        "identity_version_time": {
+          "name": "identity_version_time",
+          "value": "\"basin\".\"identity_authority_version\".\"superseded_at\" is null or \"basin\".\"identity_authority_version\".\"superseded_at\" >= \"basin\".\"identity_authority_version\".\"valid_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.approved_payee": {
+      "name": "approved_payee",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "approved_payee_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "basin_identity_id": {
+          "name": "basin_identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_name": {
+          "name": "relationship_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "payee_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revocation_cause": {
+          "name": "revocation_cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "approved_payee_basin_identity_id_index": {
+          "name": "approved_payee_basin_identity_id_index",
+          "columns": [
+            {
+              "expression": "basin_identity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "approved_payee_organization_id_status_expires_at_index": {
+          "name": "approved_payee_organization_id_status_expires_at_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "approved_payee_organization_id_organization_id_fk": {
+          "name": "approved_payee_organization_id_organization_id_fk",
+          "tableFrom": "approved_payee",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "approved_payee_basin_identity_id_basin_identity_id_fk": {
+          "name": "approved_payee_basin_identity_id_basin_identity_id_fk",
+          "tableFrom": "approved_payee",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "basin_identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "approved_payee_organization_id_basin_identity_id_unique": {
+          "name": "approved_payee_organization_id_basin_identity_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "basin_identity_id"
+          ]
+        },
+        "approved_payee_id_organization_id_unique": {
+          "name": "approved_payee_id_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "organization_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "approved_payee_revocation_cause_length": {
+          "name": "approved_payee_revocation_cause_length",
+          "value": "length(\"basin\".\"approved_payee\".\"revocation_cause\") between 1 and 240"
+        },
+        "payee_revocation": {
+          "name": "payee_revocation",
+          "value": "(\"basin\".\"approved_payee\".\"status\" = 'REVOKED') = (\"basin\".\"approved_payee\".\"revoked_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.approved_payee_generation": {
+      "name": "approved_payee_generation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "approved_payee_generation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "approved_payee_id": {
+          "name": "approved_payee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_token_id": {
+          "name": "relationship_token_id",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generation_number": {
+          "name": "generation_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registered_at": {
+          "name": "registered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_reason": {
+          "name": "end_reason",
+          "type": "generation_end_reason",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "relationship_namehash": {
+          "name": "relationship_namehash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_registry_address": {
+          "name": "relationship_registry_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "approved_payee_generation_approved_payee_id_index": {
+          "name": "approved_payee_generation_approved_payee_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"basin\".\"approved_payee_generation\".\"ended_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "approved_payee_generation_approved_payee_id_approved_payee_id_fk": {
+          "name": "approved_payee_generation_approved_payee_id_approved_payee_id_fk",
+          "tableFrom": "approved_payee_generation",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "approved_payee_generation_approved_payee_id_relationship_token_id_unique": {
+          "name": "approved_payee_generation_approved_payee_id_relationship_token_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "approved_payee_id",
+            "relationship_token_id"
+          ]
+        },
+        "approved_payee_generation_approved_payee_id_generation_number_unique": {
+          "name": "approved_payee_generation_approved_payee_id_generation_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "approved_payee_id",
+            "generation_number"
+          ]
+        },
+        "approved_payee_generation_id_approved_payee_id_unique": {
+          "name": "approved_payee_generation_id_approved_payee_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "approved_payee_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "approved_payee_generation_relationship_token_id_range": {
+          "name": "approved_payee_generation_relationship_token_id_range",
+          "value": "\"basin\".\"approved_payee_generation\".\"relationship_token_id\" >= 0"
+        },
+        "approved_payee_generation_generation_number_range": {
+          "name": "approved_payee_generation_generation_number_range",
+          "value": "\"basin\".\"approved_payee_generation\".\"generation_number\" > 0"
+        },
+        "approved_payee_generation_relationship_namehash_shape": {
+          "name": "approved_payee_generation_relationship_namehash_shape",
+          "value": "\"basin\".\"approved_payee_generation\".\"relationship_namehash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_payee_generation_relationship_registry_address_shape": {
+          "name": "approved_payee_generation_relationship_registry_address_shape",
+          "value": "\"basin\".\"approved_payee_generation\".\"relationship_registry_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "generation_ending": {
+          "name": "generation_ending",
+          "value": "(\"basin\".\"approved_payee_generation\".\"ended_at\" is null) = (\"basin\".\"approved_payee_generation\".\"end_reason\" is null)"
+        },
+        "generation_expiry": {
+          "name": "generation_expiry",
+          "value": "\"basin\".\"approved_payee_generation\".\"expires_at\" > \"basin\".\"approved_payee_generation\".\"registered_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.approved_security_root": {
+      "name": "approved_security_root",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "approved_security_root_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "approved_payee_generation_id": {
+          "name": "approved_payee_generation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payee_id": {
+          "name": "payee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_controller": {
+          "name": "identity_controller",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_epoch": {
+          "name": "identity_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_wallet_address": {
+          "name": "organization_wallet_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_registry_address": {
+          "name": "relationship_registry_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_token_id": {
+          "name": "relationship_token_id",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_proxy_address": {
+          "name": "resolver_proxy_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_implementation_address": {
+          "name": "resolver_implementation_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_implementation_code_hash": {
+          "name": "resolver_implementation_code_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_permission_profile_hash": {
+          "name": "resolver_permission_profile_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registry_permission_profile_hash": {
+          "name": "registry_permission_profile_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "security_root_commitment": {
+          "name": "security_root_commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acceptance_chain_id": {
+          "name": "acceptance_chain_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acceptance_verifying_contract": {
+          "name": "acceptance_verifying_contract",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acceptance_message_hash": {
+          "name": "acceptance_message_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acceptance_nonce": {
+          "name": "acceptance_nonce",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_relationship_expiry": {
+          "name": "accepted_relationship_expiry",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recipient_acceptance_signature": {
+          "name": "recipient_acceptance_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_transaction_hash": {
+          "name": "activation_transaction_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_block_number": {
+          "name": "activation_block_number",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_log_index": {
+          "name": "activation_log_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "approved_security_root_approved_payee_generation_id_approved_payee_generation_id_fk": {
+          "name": "approved_security_root_approved_payee_generation_id_approved_payee_generation_id_fk",
+          "tableFrom": "approved_security_root",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "approved_security_root_approved_payee_generation_id_unique": {
+          "name": "approved_security_root_approved_payee_generation_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "approved_payee_generation_id"
+          ]
+        },
+        "approved_security_root_approved_payee_generation_id_security_root_commitment_unique": {
+          "name": "approved_security_root_approved_payee_generation_id_security_root_commitment_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "approved_payee_generation_id",
+            "security_root_commitment"
+          ]
+        },
+        "approved_security_root_activation_transaction_hash_activation_log_index_unique": {
+          "name": "approved_security_root_activation_transaction_hash_activation_log_index_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "activation_transaction_hash",
+            "activation_log_index"
+          ]
+        },
+        "approved_security_root_id_approved_payee_generation_id_unique": {
+          "name": "approved_security_root_id_approved_payee_generation_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "approved_payee_generation_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "approved_security_root_payee_id_shape": {
+          "name": "approved_security_root_payee_id_shape",
+          "value": "\"basin\".\"approved_security_root\".\"payee_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_identity_controller_shape": {
+          "name": "approved_security_root_identity_controller_shape",
+          "value": "\"basin\".\"approved_security_root\".\"identity_controller\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "approved_security_root_identity_epoch_range": {
+          "name": "approved_security_root_identity_epoch_range",
+          "value": "\"basin\".\"approved_security_root\".\"identity_epoch\" >= 0"
+        },
+        "approved_security_root_organization_wallet_address_shape": {
+          "name": "approved_security_root_organization_wallet_address_shape",
+          "value": "\"basin\".\"approved_security_root\".\"organization_wallet_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "approved_security_root_relationship_registry_address_shape": {
+          "name": "approved_security_root_relationship_registry_address_shape",
+          "value": "\"basin\".\"approved_security_root\".\"relationship_registry_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "approved_security_root_relationship_token_id_range": {
+          "name": "approved_security_root_relationship_token_id_range",
+          "value": "\"basin\".\"approved_security_root\".\"relationship_token_id\" >= 0"
+        },
+        "approved_security_root_resolver_proxy_address_shape": {
+          "name": "approved_security_root_resolver_proxy_address_shape",
+          "value": "\"basin\".\"approved_security_root\".\"resolver_proxy_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "approved_security_root_resolver_implementation_address_shape": {
+          "name": "approved_security_root_resolver_implementation_address_shape",
+          "value": "\"basin\".\"approved_security_root\".\"resolver_implementation_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "approved_security_root_resolver_implementation_code_hash_shape": {
+          "name": "approved_security_root_resolver_implementation_code_hash_shape",
+          "value": "\"basin\".\"approved_security_root\".\"resolver_implementation_code_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_resolver_permission_profile_hash_shape": {
+          "name": "approved_security_root_resolver_permission_profile_hash_shape",
+          "value": "\"basin\".\"approved_security_root\".\"resolver_permission_profile_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_registry_permission_profile_hash_shape": {
+          "name": "approved_security_root_registry_permission_profile_hash_shape",
+          "value": "\"basin\".\"approved_security_root\".\"registry_permission_profile_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_security_root_commitment_shape": {
+          "name": "approved_security_root_security_root_commitment_shape",
+          "value": "\"basin\".\"approved_security_root\".\"security_root_commitment\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_acceptance_chain_id_range": {
+          "name": "approved_security_root_acceptance_chain_id_range",
+          "value": "\"basin\".\"approved_security_root\".\"acceptance_chain_id\" >= 0"
+        },
+        "approved_security_root_acceptance_verifying_contract_shape": {
+          "name": "approved_security_root_acceptance_verifying_contract_shape",
+          "value": "\"basin\".\"approved_security_root\".\"acceptance_verifying_contract\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "approved_security_root_acceptance_message_hash_shape": {
+          "name": "approved_security_root_acceptance_message_hash_shape",
+          "value": "\"basin\".\"approved_security_root\".\"acceptance_message_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_acceptance_nonce_range": {
+          "name": "approved_security_root_acceptance_nonce_range",
+          "value": "\"basin\".\"approved_security_root\".\"acceptance_nonce\" >= 0"
+        },
+        "approved_security_root_recipient_acceptance_signature_shape": {
+          "name": "approved_security_root_recipient_acceptance_signature_shape",
+          "value": "\"basin\".\"approved_security_root\".\"recipient_acceptance_signature\" ~ '^0x([0-9a-f]{128}|[0-9a-f]{130})$'"
+        },
+        "approved_security_root_activation_transaction_hash_shape": {
+          "name": "approved_security_root_activation_transaction_hash_shape",
+          "value": "\"basin\".\"approved_security_root\".\"activation_transaction_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "approved_security_root_activation_block_number_range": {
+          "name": "approved_security_root_activation_block_number_range",
+          "value": "\"basin\".\"approved_security_root\".\"activation_block_number\" >= 0"
+        },
+        "approved_security_root_activation_log_index_range": {
+          "name": "approved_security_root_activation_log_index_range",
+          "value": "\"basin\".\"approved_security_root\".\"activation_log_index\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.settlement_version": {
+      "name": "settlement_version",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "settlement_version_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "approved_payee_generation_id": {
+          "name": "approved_payee_generation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_security_root_id": {
+          "name": "approved_security_root_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settlement_epoch": {
+          "name": "settlement_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "commitment": {
+          "name": "commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descriptor_version": {
+          "name": "descriptor_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_address": {
+          "name": "asset_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_ciphertext": {
+          "name": "destination_ciphertext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_fingerprint": {
+          "name": "destination_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "settlement_version_approved_security_root_id_index": {
+          "name": "settlement_version_approved_security_root_id_index",
+          "columns": [
+            {
+              "expression": "approved_security_root_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "settlement_version_approved_payee_generation_id_index": {
+          "name": "settlement_version_approved_payee_generation_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_generation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"basin\".\"settlement_version\".\"superseded_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "settlement_version_approved_payee_generation_id_approved_payee_generation_id_fk": {
+          "name": "settlement_version_approved_payee_generation_id_approved_payee_generation_id_fk",
+          "tableFrom": "settlement_version",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "settlement_version_approved_security_root_id_approved_security_root_id_fk": {
+          "name": "settlement_version_approved_security_root_id_approved_security_root_id_fk",
+          "tableFrom": "settlement_version",
+          "tableTo": "approved_security_root",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_security_root_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "settlement_version_approved_security_root_id_approved_payee_generation_id_approved_security_root_id_approved_payee_generation_id_fk": {
+          "name": "settlement_version_approved_security_root_id_approved_payee_generation_id_approved_security_root_id_approved_payee_generation_id_fk",
+          "tableFrom": "settlement_version",
+          "tableTo": "approved_security_root",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_security_root_id",
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id",
+            "approved_payee_generation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "settlement_version_approved_payee_generation_id_settlement_epoch_unique": {
+          "name": "settlement_version_approved_payee_generation_id_settlement_epoch_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "approved_payee_generation_id",
+            "settlement_epoch"
+          ]
+        },
+        "settlement_version_id_approved_payee_generation_id_approved_security_root_id_unique": {
+          "name": "settlement_version_id_approved_payee_generation_id_approved_security_root_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "approved_payee_generation_id",
+            "approved_security_root_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "settlement_version_settlement_epoch_range": {
+          "name": "settlement_version_settlement_epoch_range",
+          "value": "\"basin\".\"settlement_version\".\"settlement_epoch\" >= 0"
+        },
+        "settlement_version_commitment_shape": {
+          "name": "settlement_version_commitment_shape",
+          "value": "\"basin\".\"settlement_version\".\"commitment\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "settlement_version_descriptor_version_range": {
+          "name": "settlement_version_descriptor_version_range",
+          "value": "\"basin\".\"settlement_version\".\"descriptor_version\" > 0"
+        },
+        "settlement_version_chain_id_range": {
+          "name": "settlement_version_chain_id_range",
+          "value": "\"basin\".\"settlement_version\".\"chain_id\" >= 0"
+        },
+        "settlement_version_asset_address_shape": {
+          "name": "settlement_version_asset_address_shape",
+          "value": "\"basin\".\"settlement_version\".\"asset_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "settlement_version_destination_ciphertext_length": {
+          "name": "settlement_version_destination_ciphertext_length",
+          "value": "length(\"basin\".\"settlement_version\".\"destination_ciphertext\") between 1 and 240"
+        },
+        "settlement_version_destination_fingerprint_length": {
+          "name": "settlement_version_destination_fingerprint_length",
+          "value": "length(\"basin\".\"settlement_version\".\"destination_fingerprint\") between 1 and 240"
+        },
+        "settlement_time": {
+          "name": "settlement_time",
+          "value": "\"basin\".\"settlement_version\".\"superseded_at\" is null or \"basin\".\"settlement_version\".\"superseded_at\" >= \"basin\".\"settlement_version\".\"valid_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.obligation": {
+      "name": "obligation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "obligation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "obligation_id": {
+          "name": "obligation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_wallet_address": {
+          "name": "organization_wallet_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_id": {
+          "name": "approved_payee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_generation_id": {
+          "name": "approved_payee_generation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "max_amount_base_units": {
+          "name": "max_amount_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "remaining_amount_base_units": {
+          "name": "remaining_amount_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_address": {
+          "name": "asset_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_reference": {
+          "name": "external_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_at": {
+          "name": "expected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metadata_hash": {
+          "name": "metadata_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "router_address": {
+          "name": "router_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "router_version": {
+          "name": "router_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "obligation_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "creation_transaction_hash": {
+          "name": "creation_transaction_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creation_block_number": {
+          "name": "creation_block_number",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creation_log_index": {
+          "name": "creation_log_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by_member_id": {
+          "name": "created_by_member_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "obligation_organization_id_index": {
+          "name": "obligation_organization_id_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "obligation_approved_payee_id_index": {
+          "name": "obligation_approved_payee_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "obligation_approved_payee_generation_id_index": {
+          "name": "obligation_approved_payee_generation_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_generation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "obligation_created_by_member_id_index": {
+          "name": "obligation_created_by_member_id_index",
+          "columns": [
+            {
+              "expression": "created_by_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "obligation_organization_id_status_valid_until_index": {
+          "name": "obligation_organization_id_status_valid_until_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "valid_until",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "obligation_organization_id_organization_id_fk": {
+          "name": "obligation_organization_id_organization_id_fk",
+          "tableFrom": "obligation",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "obligation_approved_payee_id_approved_payee_id_fk": {
+          "name": "obligation_approved_payee_id_approved_payee_id_fk",
+          "tableFrom": "obligation",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "obligation_approved_payee_generation_id_approved_payee_generation_id_fk": {
+          "name": "obligation_approved_payee_generation_id_approved_payee_generation_id_fk",
+          "tableFrom": "obligation",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "obligation_created_by_member_id_organization_member_id_fk": {
+          "name": "obligation_created_by_member_id_organization_member_id_fk",
+          "tableFrom": "obligation",
+          "tableTo": "organization_member",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "created_by_member_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "obligation_approved_payee_id_organization_id_approved_payee_id_organization_id_fk": {
+          "name": "obligation_approved_payee_id_organization_id_approved_payee_id_organization_id_fk",
+          "tableFrom": "obligation",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_id",
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organization_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "obligation_approved_payee_generation_id_approved_payee_id_approved_payee_generation_id_approved_payee_id_fk": {
+          "name": "obligation_approved_payee_generation_id_approved_payee_id_approved_payee_generation_id_approved_payee_id_fk",
+          "tableFrom": "obligation",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_generation_id",
+            "approved_payee_id"
+          ],
+          "columnsTo": [
+            "id",
+            "approved_payee_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "obligation_obligation_id_unique": {
+          "name": "obligation_obligation_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "obligation_id"
+          ]
+        },
+        "obligation_id_organization_id_approved_payee_id_approved_payee_generation_id_unique": {
+          "name": "obligation_id_organization_id_approved_payee_id_approved_payee_generation_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "organization_id",
+            "approved_payee_id",
+            "approved_payee_generation_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "obligation_obligation_id_shape": {
+          "name": "obligation_obligation_id_shape",
+          "value": "\"basin\".\"obligation\".\"obligation_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "obligation_organization_wallet_address_shape": {
+          "name": "obligation_organization_wallet_address_shape",
+          "value": "\"basin\".\"obligation\".\"organization_wallet_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "obligation_max_amount_base_units_range": {
+          "name": "obligation_max_amount_base_units_range",
+          "value": "\"basin\".\"obligation\".\"max_amount_base_units\" > 0"
+        },
+        "obligation_remaining_amount_base_units_range": {
+          "name": "obligation_remaining_amount_base_units_range",
+          "value": "\"basin\".\"obligation\".\"remaining_amount_base_units\" >= 0"
+        },
+        "obligation_asset_address_shape": {
+          "name": "obligation_asset_address_shape",
+          "value": "\"basin\".\"obligation\".\"asset_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "obligation_purpose_length": {
+          "name": "obligation_purpose_length",
+          "value": "length(\"basin\".\"obligation\".\"purpose\") <= 240 and length(btrim(\"basin\".\"obligation\".\"purpose\")) > 0"
+        },
+        "obligation_external_reference_length": {
+          "name": "obligation_external_reference_length",
+          "value": "length(\"basin\".\"obligation\".\"external_reference\") <= 160"
+        },
+        "obligation_metadata_hash_shape": {
+          "name": "obligation_metadata_hash_shape",
+          "value": "\"basin\".\"obligation\".\"metadata_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "obligation_router_address_shape": {
+          "name": "obligation_router_address_shape",
+          "value": "\"basin\".\"obligation\".\"router_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "obligation_router_version_length": {
+          "name": "obligation_router_version_length",
+          "value": "length(\"basin\".\"obligation\".\"router_version\") between 1 and 240"
+        },
+        "obligation_creation_transaction_hash_shape": {
+          "name": "obligation_creation_transaction_hash_shape",
+          "value": "\"basin\".\"obligation\".\"creation_transaction_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "obligation_creation_block_number_range": {
+          "name": "obligation_creation_block_number_range",
+          "value": "\"basin\".\"obligation\".\"creation_block_number\" >= 0"
+        },
+        "obligation_creation_log_index_range": {
+          "name": "obligation_creation_log_index_range",
+          "value": "\"basin\".\"obligation\".\"creation_log_index\" >= 0"
+        },
+        "obligation_capacity": {
+          "name": "obligation_capacity",
+          "value": "\"basin\".\"obligation\".\"remaining_amount_base_units\" <= \"basin\".\"obligation\".\"max_amount_base_units\" and (\"basin\".\"obligation\".\"status\" != 'CONSUMED' or \"basin\".\"obligation\".\"remaining_amount_base_units\" = 0) and (\"basin\".\"obligation\".\"status\" != 'ACTIVE' or (\"basin\".\"obligation\".\"remaining_amount_base_units\" > 0 and \"basin\".\"obligation\".\"creation_transaction_hash\" is not null and \"basin\".\"obligation\".\"creation_block_number\" is not null and \"basin\".\"obligation\".\"creation_log_index\" is not null))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.payment": {
+      "name": "payment",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "payment_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_id": {
+          "name": "approved_payee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_generation_id": {
+          "name": "approved_payee_generation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_record_id": {
+          "name": "obligation_record_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_base_units": {
+          "name": "amount_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_address": {
+          "name": "asset_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_reference": {
+          "name": "external_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "payment_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blocked_reason": {
+          "name": "blocked_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "payment_organization_id_index": {
+          "name": "payment_organization_id_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_approved_payee_id_index": {
+          "name": "payment_approved_payee_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_approved_payee_generation_id_index": {
+          "name": "payment_approved_payee_generation_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_generation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_obligation_record_id_index": {
+          "name": "payment_obligation_record_id_index",
+          "columns": [
+            {
+              "expression": "obligation_record_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_organization_id_status_created_at_index": {
+          "name": "payment_organization_id_status_created_at_index",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "payment_organization_id_organization_id_fk": {
+          "name": "payment_organization_id_organization_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_approved_payee_id_approved_payee_id_fk": {
+          "name": "payment_approved_payee_id_approved_payee_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_approved_payee_generation_id_approved_payee_generation_id_fk": {
+          "name": "payment_approved_payee_generation_id_approved_payee_generation_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_obligation_record_id_obligation_id_fk": {
+          "name": "payment_obligation_record_id_obligation_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "obligation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "obligation_record_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_obligation_record_id_organization_id_approved_payee_id_approved_payee_generation_id_obligation_id_organization_id_approved_payee_id_approved_payee_generation_id_fk": {
+          "name": "payment_obligation_record_id_organization_id_approved_payee_id_approved_payee_generation_id_obligation_id_organization_id_approved_payee_id_approved_payee_generation_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "obligation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "obligation_record_id",
+            "organization_id",
+            "approved_payee_id",
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id",
+            "organization_id",
+            "approved_payee_id",
+            "approved_payee_generation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "payment_payment_id_unique": {
+          "name": "payment_payment_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "payment_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "payment_payment_id_shape": {
+          "name": "payment_payment_id_shape",
+          "value": "\"basin\".\"payment\".\"payment_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_amount_base_units_range": {
+          "name": "payment_amount_base_units_range",
+          "value": "\"basin\".\"payment\".\"amount_base_units\" > 0"
+        },
+        "payment_asset_address_shape": {
+          "name": "payment_asset_address_shape",
+          "value": "\"basin\".\"payment\".\"asset_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_purpose_length": {
+          "name": "payment_purpose_length",
+          "value": "length(\"basin\".\"payment\".\"purpose\") <= 240 and length(btrim(\"basin\".\"payment\".\"purpose\")) > 0"
+        },
+        "payment_external_reference_length": {
+          "name": "payment_external_reference_length",
+          "value": "length(\"basin\".\"payment\".\"external_reference\") <= 160"
+        },
+        "payment_blocked_reason_length": {
+          "name": "payment_blocked_reason_length",
+          "value": "length(\"basin\".\"payment\".\"blocked_reason\") between 1 and 240"
+        },
+        "payment_state_fields": {
+          "name": "payment_state_fields",
+          "value": "(\"basin\".\"payment\".\"status\" = 'SETTLED') = (\"basin\".\"payment\".\"settled_at\" is not null) and (\"basin\".\"payment\".\"status\" != 'BLOCKED' or \"basin\".\"payment\".\"blocked_reason\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.payment_event": {
+      "name": "payment_event",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "payment_event_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "payment_event_type",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "payment_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "payment_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "safe_metadata": {
+          "name": "safe_metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "payment_event_payment_id_payment_id_fk": {
+          "name": "payment_event_payment_id_payment_id_fk",
+          "tableFrom": "payment_event",
+          "tableTo": "payment",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "payment_event_payment_id_sequence_unique": {
+          "name": "payment_event_payment_id_sequence_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "payment_id",
+            "sequence"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "payment_event_sequence_range": {
+          "name": "payment_event_sequence_range",
+          "value": "\"basin\".\"payment_event\".\"sequence\" > 0"
+        },
+        "payment_event_reason_code_length": {
+          "name": "payment_event_reason_code_length",
+          "value": "length(\"basin\".\"payment_event\".\"reason_code\") between 1 and 240"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.payment_authority_snapshot": {
+      "name": "payment_authority_snapshot",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "payment_authority_snapshot_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_generation_id": {
+          "name": "approved_payee_generation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_security_root_id": {
+          "name": "approved_security_root_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settlement_version_id": {
+          "name": "settlement_version_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_name": {
+          "name": "relationship_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_token_id": {
+          "name": "relationship_token_id",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_expiry": {
+          "name": "relationship_expiry",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_status": {
+          "name": "relationship_status",
+          "type": "payee_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "global_payee_name": {
+          "name": "global_payee_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payee_id": {
+          "name": "payee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_controller": {
+          "name": "identity_controller",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_epoch": {
+          "name": "identity_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_registry_address": {
+          "name": "relationship_registry_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_proxy_address": {
+          "name": "resolver_proxy_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_implementation_address": {
+          "name": "resolver_implementation_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_implementation_code_hash": {
+          "name": "resolver_implementation_code_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver_permission_profile_hash": {
+          "name": "resolver_permission_profile_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registry_permission_profile_hash": {
+          "name": "registry_permission_profile_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "security_root_commitment": {
+          "name": "security_root_commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settlement_epoch": {
+          "name": "settlement_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settlement_commitment": {
+          "name": "settlement_commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_protocol_id": {
+          "name": "obligation_protocol_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_metadata_hash": {
+          "name": "obligation_metadata_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_max_amount_base_units": {
+          "name": "obligation_max_amount_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_remaining_before_base_units": {
+          "name": "obligation_remaining_before_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_remaining_after_base_units": {
+          "name": "obligation_remaining_after_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_valid_until": {
+          "name": "obligation_valid_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_wallet_address": {
+          "name": "organization_wallet_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "router_address": {
+          "name": "router_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "router_version": {
+          "name": "router_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "execution_path": {
+          "name": "execution_path",
+          "type": "execution_path",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "captured_at": {
+          "name": "captured_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "payment_authority_snapshot_approved_payee_generation_id_index": {
+          "name": "payment_authority_snapshot_approved_payee_generation_id_index",
+          "columns": [
+            {
+              "expression": "approved_payee_generation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_authority_snapshot_approved_security_root_id_index": {
+          "name": "payment_authority_snapshot_approved_security_root_id_index",
+          "columns": [
+            {
+              "expression": "approved_security_root_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_authority_snapshot_settlement_version_id_index": {
+          "name": "payment_authority_snapshot_settlement_version_id_index",
+          "columns": [
+            {
+              "expression": "settlement_version_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "payment_authority_snapshot_payment_id_payment_id_fk": {
+          "name": "payment_authority_snapshot_payment_id_payment_id_fk",
+          "tableFrom": "payment_authority_snapshot",
+          "tableTo": "payment",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_authority_snapshot_approved_payee_generation_id_approved_payee_generation_id_fk": {
+          "name": "payment_authority_snapshot_approved_payee_generation_id_approved_payee_generation_id_fk",
+          "tableFrom": "payment_authority_snapshot",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_authority_snapshot_approved_security_root_id_approved_security_root_id_fk": {
+          "name": "payment_authority_snapshot_approved_security_root_id_approved_security_root_id_fk",
+          "tableFrom": "payment_authority_snapshot",
+          "tableTo": "approved_security_root",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_security_root_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_authority_snapshot_settlement_version_id_settlement_version_id_fk": {
+          "name": "payment_authority_snapshot_settlement_version_id_settlement_version_id_fk",
+          "tableFrom": "payment_authority_snapshot",
+          "tableTo": "settlement_version",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "settlement_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_authority_snapshot_approved_security_root_id_approved_payee_generation_id_approved_security_root_id_approved_payee_generation_id_fk": {
+          "name": "payment_authority_snapshot_approved_security_root_id_approved_payee_generation_id_approved_security_root_id_approved_payee_generation_id_fk",
+          "tableFrom": "payment_authority_snapshot",
+          "tableTo": "approved_security_root",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_security_root_id",
+            "approved_payee_generation_id"
+          ],
+          "columnsTo": [
+            "id",
+            "approved_payee_generation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "payment_authority_snapshot_settlement_version_id_approved_payee_generation_id_approved_security_root_id_settlement_version_id_approved_payee_generation_id_approved_security_root_id_fk": {
+          "name": "payment_authority_snapshot_settlement_version_id_approved_payee_generation_id_approved_security_root_id_settlement_version_id_approved_payee_generation_id_approved_security_root_id_fk",
+          "tableFrom": "payment_authority_snapshot",
+          "tableTo": "settlement_version",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "settlement_version_id",
+            "approved_payee_generation_id",
+            "approved_security_root_id"
+          ],
+          "columnsTo": [
+            "id",
+            "approved_payee_generation_id",
+            "approved_security_root_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "payment_authority_snapshot_payment_id_unique": {
+          "name": "payment_authority_snapshot_payment_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "payment_id"
+          ]
+        },
+        "payment_authority_snapshot_id_payment_id_unique": {
+          "name": "payment_authority_snapshot_id_payment_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "payment_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "payment_authority_snapshot_relationship_token_id_range": {
+          "name": "payment_authority_snapshot_relationship_token_id_range",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"relationship_token_id\" >= 0"
+        },
+        "payment_authority_snapshot_payee_id_shape": {
+          "name": "payment_authority_snapshot_payee_id_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"payee_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_identity_controller_shape": {
+          "name": "payment_authority_snapshot_identity_controller_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"identity_controller\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_authority_snapshot_identity_epoch_range": {
+          "name": "payment_authority_snapshot_identity_epoch_range",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"identity_epoch\" >= 0"
+        },
+        "payment_authority_snapshot_relationship_registry_address_shape": {
+          "name": "payment_authority_snapshot_relationship_registry_address_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"relationship_registry_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_authority_snapshot_resolver_proxy_address_shape": {
+          "name": "payment_authority_snapshot_resolver_proxy_address_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"resolver_proxy_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_authority_snapshot_resolver_implementation_address_shape": {
+          "name": "payment_authority_snapshot_resolver_implementation_address_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"resolver_implementation_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_authority_snapshot_resolver_implementation_code_hash_shape": {
+          "name": "payment_authority_snapshot_resolver_implementation_code_hash_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"resolver_implementation_code_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_resolver_permission_profile_hash_shape": {
+          "name": "payment_authority_snapshot_resolver_permission_profile_hash_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"resolver_permission_profile_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_registry_permission_profile_hash_shape": {
+          "name": "payment_authority_snapshot_registry_permission_profile_hash_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"registry_permission_profile_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_security_root_commitment_shape": {
+          "name": "payment_authority_snapshot_security_root_commitment_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"security_root_commitment\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_settlement_epoch_range": {
+          "name": "payment_authority_snapshot_settlement_epoch_range",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"settlement_epoch\" >= 0"
+        },
+        "payment_authority_snapshot_settlement_commitment_shape": {
+          "name": "payment_authority_snapshot_settlement_commitment_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"settlement_commitment\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_obligation_protocol_id_shape": {
+          "name": "payment_authority_snapshot_obligation_protocol_id_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"obligation_protocol_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_obligation_metadata_hash_shape": {
+          "name": "payment_authority_snapshot_obligation_metadata_hash_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"obligation_metadata_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "payment_authority_snapshot_obligation_max_amount_base_units_range": {
+          "name": "payment_authority_snapshot_obligation_max_amount_base_units_range",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"obligation_max_amount_base_units\" > 0"
+        },
+        "payment_authority_snapshot_obligation_remaining_before_base_units_range": {
+          "name": "payment_authority_snapshot_obligation_remaining_before_base_units_range",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"obligation_remaining_before_base_units\" > 0"
+        },
+        "payment_authority_snapshot_obligation_remaining_after_base_units_range": {
+          "name": "payment_authority_snapshot_obligation_remaining_after_base_units_range",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"obligation_remaining_after_base_units\" >= 0"
+        },
+        "payment_authority_snapshot_organization_wallet_address_shape": {
+          "name": "payment_authority_snapshot_organization_wallet_address_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"organization_wallet_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_authority_snapshot_router_address_shape": {
+          "name": "payment_authority_snapshot_router_address_shape",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"router_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "payment_authority_snapshot_router_version_length": {
+          "name": "payment_authority_snapshot_router_version_length",
+          "value": "length(\"basin\".\"payment_authority_snapshot\".\"router_version\") between 1 and 240"
+        },
+        "snapshot_capacity": {
+          "name": "snapshot_capacity",
+          "value": "\"basin\".\"payment_authority_snapshot\".\"obligation_remaining_before_base_units\" <= \"basin\".\"payment_authority_snapshot\".\"obligation_max_amount_base_units\" and \"basin\".\"payment_authority_snapshot\".\"obligation_remaining_after_base_units\" < \"basin\".\"payment_authority_snapshot\".\"obligation_remaining_before_base_units\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.receipt": {
+      "name": "receipt",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "receipt_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authority_snapshot_id": {
+          "name": "authority_snapshot_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payer_organization_name": {
+          "name": "payer_organization_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payee_display_name": {
+          "name": "payee_display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_base_units": {
+          "name": "amount_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_address": {
+          "name": "asset_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asset_symbol": {
+          "name": "asset_symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_reference": {
+          "name": "external_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "obligation_protocol_id": {
+          "name": "obligation_protocol_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "obligation_metadata_hash": {
+          "name": "obligation_metadata_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "security_root_commitment": {
+          "name": "security_root_commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_hash": {
+          "name": "transaction_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "router_address": {
+          "name": "router_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "router_version": {
+          "name": "router_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "receipt_payment_id_payment_id_fk": {
+          "name": "receipt_payment_id_payment_id_fk",
+          "tableFrom": "receipt",
+          "tableTo": "payment",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "receipt_authority_snapshot_id_payment_authority_snapshot_id_fk": {
+          "name": "receipt_authority_snapshot_id_payment_authority_snapshot_id_fk",
+          "tableFrom": "receipt",
+          "tableTo": "payment_authority_snapshot",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "authority_snapshot_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "receipt_authority_snapshot_id_payment_id_payment_authority_snapshot_id_payment_id_fk": {
+          "name": "receipt_authority_snapshot_id_payment_id_payment_authority_snapshot_id_payment_id_fk",
+          "tableFrom": "receipt",
+          "tableTo": "payment_authority_snapshot",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "authority_snapshot_id",
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id",
+            "payment_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "receipt_payment_id_unique": {
+          "name": "receipt_payment_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "payment_id"
+          ]
+        },
+        "receipt_authority_snapshot_id_unique": {
+          "name": "receipt_authority_snapshot_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "authority_snapshot_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "receipt_payer_organization_name_length": {
+          "name": "receipt_payer_organization_name_length",
+          "value": "length(\"basin\".\"receipt\".\"payer_organization_name\") <= 120 and length(btrim(\"basin\".\"receipt\".\"payer_organization_name\")) > 0"
+        },
+        "receipt_payee_display_name_length": {
+          "name": "receipt_payee_display_name_length",
+          "value": "length(\"basin\".\"receipt\".\"payee_display_name\") <= 120 and length(btrim(\"basin\".\"receipt\".\"payee_display_name\")) > 0"
+        },
+        "receipt_amount_base_units_range": {
+          "name": "receipt_amount_base_units_range",
+          "value": "\"basin\".\"receipt\".\"amount_base_units\" > 0"
+        },
+        "receipt_asset_address_shape": {
+          "name": "receipt_asset_address_shape",
+          "value": "\"basin\".\"receipt\".\"asset_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "receipt_asset_symbol_length": {
+          "name": "receipt_asset_symbol_length",
+          "value": "length(\"basin\".\"receipt\".\"asset_symbol\") between 1 and 240"
+        },
+        "receipt_purpose_length": {
+          "name": "receipt_purpose_length",
+          "value": "length(\"basin\".\"receipt\".\"purpose\") <= 240 and length(btrim(\"basin\".\"receipt\".\"purpose\")) > 0"
+        },
+        "receipt_external_reference_length": {
+          "name": "receipt_external_reference_length",
+          "value": "length(\"basin\".\"receipt\".\"external_reference\") <= 160"
+        },
+        "receipt_obligation_protocol_id_shape": {
+          "name": "receipt_obligation_protocol_id_shape",
+          "value": "\"basin\".\"receipt\".\"obligation_protocol_id\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "receipt_obligation_metadata_hash_shape": {
+          "name": "receipt_obligation_metadata_hash_shape",
+          "value": "\"basin\".\"receipt\".\"obligation_metadata_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "receipt_security_root_commitment_shape": {
+          "name": "receipt_security_root_commitment_shape",
+          "value": "\"basin\".\"receipt\".\"security_root_commitment\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "receipt_transaction_hash_shape": {
+          "name": "receipt_transaction_hash_shape",
+          "value": "\"basin\".\"receipt\".\"transaction_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "receipt_chain_id_range": {
+          "name": "receipt_chain_id_range",
+          "value": "\"basin\".\"receipt\".\"chain_id\" >= 0"
+        },
+        "receipt_router_address_shape": {
+          "name": "receipt_router_address_shape",
+          "value": "\"basin\".\"receipt\".\"router_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "receipt_router_version_length": {
+          "name": "receipt_router_version_length",
+          "value": "length(\"basin\".\"receipt\".\"router_version\") between 1 and 240"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.idempotency_key": {
+      "name": "idempotency_key",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "idempotency_key_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "scope": {
+          "name": "scope",
+          "type": "idempotency_scope",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "idempotency_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idempotency_key_payment_id_index": {
+          "name": "idempotency_key_payment_id_index",
+          "columns": [
+            {
+              "expression": "payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "idempotency_key_organization_id_organization_id_fk": {
+          "name": "idempotency_key_organization_id_organization_id_fk",
+          "tableFrom": "idempotency_key",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "idempotency_key_payment_id_payment_id_fk": {
+          "name": "idempotency_key_payment_id_payment_id_fk",
+          "tableFrom": "idempotency_key",
+          "tableTo": "payment",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "idempotency_key_organization_id_scope_key_unique": {
+          "name": "idempotency_key_organization_id_scope_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "scope",
+            "key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "idempotency_key_key_length": {
+          "name": "idempotency_key_key_length",
+          "value": "length(\"basin\".\"idempotency_key\".\"key\") between 1 and 240"
+        },
+        "idempotency_key_request_hash_shape": {
+          "name": "idempotency_key_request_hash_shape",
+          "value": "\"basin\".\"idempotency_key\".\"request_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "idempotency_completion": {
+          "name": "idempotency_completion",
+          "value": "\"basin\".\"idempotency_key\".\"status\" != 'COMPLETED' or \"basin\".\"idempotency_key\".\"payment_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.receiving_preference": {
+      "name": "receiving_preference",
+      "schema": "basin",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "identity_id": {
+          "name": "identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_ciphertext": {
+          "name": "destination_ciphertext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_version": {
+          "name": "key_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "receiving_preference_workspace_id_workspace_id_fk": {
+          "name": "receiving_preference_workspace_id_workspace_id_fk",
+          "tableFrom": "receiving_preference",
+          "tableTo": "workspace",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "receiving_preference_identity_id_basin_identity_id_fk": {
+          "name": "receiving_preference_identity_id_basin_identity_id_fk",
+          "tableFrom": "receiving_preference",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "receiving_preference_revision": {
+          "name": "receiving_preference_revision",
+          "value": "\"basin\".\"receiving_preference\".\"revision\" >= 0"
+        },
+        "receiving_preference_ciphertext": {
+          "name": "receiving_preference_ciphertext",
+          "value": "length(\"basin\".\"receiving_preference\".\"destination_ciphertext\") between 1 and 240"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.settlement_operation": {
+      "name": "settlement_operation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "settlement_operation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_id": {
+          "name": "identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_id": {
+          "name": "relationship_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relationship_token_id": {
+          "name": "relationship_token_id",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_epoch": {
+          "name": "identity_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolver": {
+          "name": "resolver",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "profile_digest": {
+          "name": "profile_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_root_digest": {
+          "name": "accepted_root_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_record": {
+          "name": "expected_record",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_epoch": {
+          "name": "target_epoch",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "commitment": {
+          "name": "commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descriptor_ciphertext": {
+          "name": "descriptor_ciphertext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_version": {
+          "name": "key_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prepared_block": {
+          "name": "prepared_block",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prepared_expiry": {
+          "name": "prepared_expiry",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "settlement_operation_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PREPARED'"
+        },
+        "transaction_hash": {
+          "name": "transaction_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receipt_block_number": {
+          "name": "receipt_block_number",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receipt_block_hash": {
+          "name": "receipt_block_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "settlement_operation_unresolved": {
+          "name": "settlement_operation_unresolved",
+          "columns": [
+            {
+              "expression": "relationship_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"basin\".\"settlement_operation\".\"status\" not in ('CONFIRMED', 'FAILED')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "settlement_operation_workspace_id_workspace_id_fk": {
+          "name": "settlement_operation_workspace_id_workspace_id_fk",
+          "tableFrom": "settlement_operation",
+          "tableTo": "workspace",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "settlement_operation_identity_id_basin_identity_id_fk": {
+          "name": "settlement_operation_identity_id_basin_identity_id_fk",
+          "tableFrom": "settlement_operation",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "settlement_operation_relationship_id_approved_payee_id_fk": {
+          "name": "settlement_operation_relationship_id_approved_payee_id_fk",
+          "tableFrom": "settlement_operation",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "relationship_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "settlement_operation_workspace_id_idempotency_key_unique": {
+          "name": "settlement_operation_workspace_id_idempotency_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "settlement_operation_epochs": {
+          "name": "settlement_operation_epochs",
+          "value": "\"basin\".\"settlement_operation\".\"target_epoch\" >= 0 and \"basin\".\"settlement_operation\".\"identity_epoch\" >= 0 and \"basin\".\"settlement_operation\".\"relationship_token_id\" >= 0"
+        },
+        "settlement_operation_hashes": {
+          "name": "settlement_operation_hashes",
+          "value": "\"basin\".\"settlement_operation\".\"commitment\" ~ '^0x[0-9a-f]{64}$' and \"basin\".\"settlement_operation\".\"profile_digest\" ~ '^0x[0-9a-f]{64}$' and \"basin\".\"settlement_operation\".\"request_digest\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "settlement_operation_evidence": {
+          "name": "settlement_operation_evidence",
+          "value": "\"basin\".\"settlement_operation\".\"status\" <> 'CONFIRMED' or (\"basin\".\"settlement_operation\".\"transaction_hash\" is not null and \"basin\".\"settlement_operation\".\"receipt_block_number\" is not null and \"basin\".\"settlement_operation\".\"receipt_block_hash\" is not null and \"basin\".\"settlement_operation\".\"verified_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.organization_treasury": {
+      "name": "organization_treasury",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "organization_treasury_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "treasury_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NOT_STARTED'"
+        },
+        "privy_wallet_id": {
+          "name": "privy_wallet_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wallet_address": {
+          "name": "wallet_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chain_type": {
+          "name": "chain_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_quorum_id": {
+          "name": "owner_quorum_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_quorum_threshold": {
+          "name": "owner_quorum_threshold",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "routine_signer_id": {
+          "name": "routine_signer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "routine_policy_id": {
+          "name": "routine_policy_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "routine_policy_owner_id": {
+          "name": "routine_policy_owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "routine_policy_fingerprint": {
+          "name": "routine_policy_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "router_address": {
+          "name": "router_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "router_version": {
+          "name": "router_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "routine_per_tx_limit_base_units": {
+          "name": "routine_per_tx_limit_base_units",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_verified_at": {
+          "name": "last_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_code": {
+          "name": "last_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_treasury_organization_id_organization_id_fk": {
+          "name": "organization_treasury_organization_id_organization_id_fk",
+          "tableFrom": "organization_treasury",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_treasury_organization_id_unique": {
+          "name": "organization_treasury_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id"
+          ]
+        },
+        "organization_treasury_privy_wallet_id_unique": {
+          "name": "organization_treasury_privy_wallet_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "privy_wallet_id"
+          ]
+        },
+        "organization_treasury_wallet_address_unique": {
+          "name": "organization_treasury_wallet_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "wallet_address"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_treasury_chain_type": {
+          "name": "organization_treasury_chain_type",
+          "value": "\"basin\".\"organization_treasury\".\"chain_type\" is null or \"basin\".\"organization_treasury\".\"chain_type\" = 'ethereum'"
+        },
+        "organization_treasury_owner_threshold": {
+          "name": "organization_treasury_owner_threshold",
+          "value": "\"basin\".\"organization_treasury\".\"owner_quorum_threshold\" is null or \"basin\".\"organization_treasury\".\"owner_quorum_threshold\" > 0"
+        },
+        "organization_treasury_wallet_address": {
+          "name": "organization_treasury_wallet_address",
+          "value": "\"basin\".\"organization_treasury\".\"wallet_address\" is null or \"basin\".\"organization_treasury\".\"wallet_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "organization_treasury_policy_fingerprint": {
+          "name": "organization_treasury_policy_fingerprint",
+          "value": "\"basin\".\"organization_treasury\".\"routine_policy_fingerprint\" is null or \"basin\".\"organization_treasury\".\"routine_policy_fingerprint\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "organization_treasury_limit": {
+          "name": "organization_treasury_limit",
+          "value": "\"basin\".\"organization_treasury\".\"routine_per_tx_limit_base_units\" is null or \"basin\".\"organization_treasury\".\"routine_per_tx_limit_base_units\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.privy_provisioning_operation": {
+      "name": "privy_provisioning_operation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "privy_provisioning_operation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation_type": {
+          "name": "operation_type",
+          "type": "treasury_operation_type",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "step": {
+          "name": "step",
+          "type": "treasury_operation_step",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'STARTED'"
+        },
+        "status": {
+          "name": "status",
+          "type": "treasury_operation_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'IN_PROGRESS'"
+        },
+        "privy_intent_id": {
+          "name": "privy_intent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "safe_error_code": {
+          "name": "safe_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "privy_provisioning_operation_organization_id_organization_id_fk": {
+          "name": "privy_provisioning_operation_organization_id_organization_id_fk",
+          "tableFrom": "privy_provisioning_operation",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "privy_provisioning_operation_organization_id_operation_type_idempotency_key_unique": {
+          "name": "privy_provisioning_operation_organization_id_operation_type_idempotency_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "operation_type",
+            "idempotency_key"
+          ]
+        },
+        "privy_provisioning_operation_privy_intent_id_unique": {
+          "name": "privy_provisioning_operation_privy_intent_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "privy_intent_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "privy_operation_idempotency_length": {
+          "name": "privy_operation_idempotency_length",
+          "value": "length(\"basin\".\"privy_provisioning_operation\".\"idempotency_key\") between 16 and 160"
+        },
+        "privy_operation_fingerprint": {
+          "name": "privy_operation_fingerprint",
+          "value": "\"basin\".\"privy_provisioning_operation\".\"request_fingerprint\" ~ '^0x[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.privy_webhook_receipt": {
+      "name": "privy_webhook_receipt",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "privy_webhook_receipt_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "delivery_id": {
+          "name": "delivery_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "processing_status": {
+          "name": "processing_status",
+          "type": "webhook_processing_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'RECEIVED'"
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "privy_webhook_receipt_organization_id_organization_id_fk": {
+          "name": "privy_webhook_receipt_organization_id_organization_id_fk",
+          "tableFrom": "privy_webhook_receipt",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "privy_webhook_receipt_delivery_id_unique": {
+          "name": "privy_webhook_receipt_delivery_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "delivery_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "privy_webhook_delivery_length": {
+          "name": "privy_webhook_delivery_length",
+          "value": "length(\"basin\".\"privy_webhook_receipt\".\"delivery_id\") between 1 and 240"
+        },
+        "privy_webhook_payload_hash": {
+          "name": "privy_webhook_payload_hash",
+          "value": "\"basin\".\"privy_webhook_receipt\".\"payload_hash\" ~ '^0x[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.routine_signer_secret": {
+      "name": "routine_signer_secret",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "routine_signer_secret_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_key": {
+          "name": "public_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_key_fingerprint": {
+          "name": "public_key_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ciphertext": {
+          "name": "ciphertext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "iv": {
+          "name": "iv",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_tag": {
+          "name": "auth_tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_version": {
+          "name": "key_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "routine_signer_secret_organization_id_organization_id_fk": {
+          "name": "routine_signer_secret_organization_id_organization_id_fk",
+          "tableFrom": "routine_signer_secret",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "routine_signer_secret_organization_id_unique": {
+          "name": "routine_signer_secret_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id"
+          ]
+        },
+        "routine_signer_secret_public_key_fingerprint_unique": {
+          "name": "routine_signer_secret_public_key_fingerprint_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "public_key_fingerprint"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "routine_signer_public_fingerprint": {
+          "name": "routine_signer_public_fingerprint",
+          "value": "\"basin\".\"routine_signer_secret\".\"public_key_fingerprint\" ~ '^0x[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.organization_namespace": {
+      "name": "organization_namespace",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "organization_namespace_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "basin_identity_id": {
+          "name": "basin_identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registry_address": {
+          "name": "registry_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_name": {
+          "name": "parent_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registry_implementation_address": {
+          "name": "registry_implementation_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "setup_operation_id": {
+          "name": "setup_operation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verification_block_number": {
+          "name": "verification_block_number",
+          "type": "numeric(78, 0)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verified_at": {
+          "name": "verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_namespace_organization_id_organization_id_fk": {
+          "name": "organization_namespace_organization_id_organization_id_fk",
+          "tableFrom": "organization_namespace",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organization_namespace_basin_identity_id_basin_identity_id_fk": {
+          "name": "organization_namespace_basin_identity_id_basin_identity_id_fk",
+          "tableFrom": "organization_namespace",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "basin_identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_namespace_organization_id_unique": {
+          "name": "organization_namespace_organization_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id"
+          ]
+        },
+        "organization_namespace_registry_address_unique": {
+          "name": "organization_namespace_registry_address_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "registry_address"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "organization_namespace_chain": {
+          "name": "organization_namespace_chain",
+          "value": "\"basin\".\"organization_namespace\".\"chain_id\" = 11155111"
+        },
+        "organization_namespace_registry_address_shape": {
+          "name": "organization_namespace_registry_address_shape",
+          "value": "\"basin\".\"organization_namespace\".\"registry_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "organization_namespace_implementation_address_shape": {
+          "name": "organization_namespace_implementation_address_shape",
+          "value": "\"basin\".\"organization_namespace\".\"registry_implementation_address\" ~ '^0x[0-9a-f]{40}$'"
+        },
+        "organization_namespace_verification_block_range": {
+          "name": "organization_namespace_verification_block_range",
+          "value": "\"basin\".\"organization_namespace\".\"verification_block_number\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.relationship_operation": {
+      "name": "relationship_operation",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "relationship_operation_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "kind": {
+          "name": "kind",
+          "type": "relationship_operation_kind",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_workspace_id": {
+          "name": "actor_workspace_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_id": {
+          "name": "approved_payee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_id": {
+          "name": "identity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_hash": {
+          "name": "request_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "relationship_operation_status",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PREPARED'"
+        },
+        "step": {
+          "name": "step",
+          "type": "relationship_operation_step",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'REVIEWED'"
+        },
+        "review_snapshot": {
+          "name": "review_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "review_expires_at": {
+          "name": "review_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authorization_reference": {
+          "name": "authorization_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transaction_hashes": {
+          "name": "transaction_hashes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "acceptance_payload": {
+          "name": "acceptance_payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acceptance_signature": {
+          "name": "acceptance_signature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_code": {
+          "name": "last_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "relationship_operation_approved_payee_id_updated_at_index": {
+          "name": "relationship_operation_approved_payee_id_updated_at_index",
+          "columns": [
+            {
+              "expression": "approved_payee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relationship_operation_unresolved_relationship": {
+          "name": "relationship_operation_unresolved_relationship",
+          "columns": [
+            {
+              "expression": "approved_payee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"basin\".\"relationship_operation\".\"approved_payee_id\" is not null and \"basin\".\"relationship_operation\".\"status\" in ('PREPARED', 'AWAITING_AUTHORIZATION', 'SUBMITTED', 'NEEDS_ATTENTION')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "relationship_operation_organization_id_organization_id_fk": {
+          "name": "relationship_operation_organization_id_organization_id_fk",
+          "tableFrom": "relationship_operation",
+          "tableTo": "organization",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_operation_actor_user_id_user_id_fk": {
+          "name": "relationship_operation_actor_user_id_user_id_fk",
+          "tableFrom": "relationship_operation",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_operation_actor_workspace_id_workspace_id_fk": {
+          "name": "relationship_operation_actor_workspace_id_workspace_id_fk",
+          "tableFrom": "relationship_operation",
+          "tableTo": "workspace",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "actor_workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_operation_approved_payee_id_approved_payee_id_fk": {
+          "name": "relationship_operation_approved_payee_id_approved_payee_id_fk",
+          "tableFrom": "relationship_operation",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_operation_identity_id_basin_identity_id_fk": {
+          "name": "relationship_operation_identity_id_basin_identity_id_fk",
+          "tableFrom": "relationship_operation",
+          "tableTo": "basin_identity",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "identity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "relationship_operation_organization_id_actor_user_id_kind_idempotency_key_unique": {
+          "name": "relationship_operation_organization_id_actor_user_id_kind_idempotency_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "organization_id",
+            "actor_user_id",
+            "kind",
+            "idempotency_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "relationship_operation_request_hash_shape": {
+          "name": "relationship_operation_request_hash_shape",
+          "value": "\"basin\".\"relationship_operation\".\"request_hash\" ~ '^0x[0-9a-f]{64}$'"
+        },
+        "relationship_operation_signature_shape": {
+          "name": "relationship_operation_signature_shape",
+          "value": "\"basin\".\"relationship_operation\".\"acceptance_signature\" is null or \"basin\".\"relationship_operation\".\"acceptance_signature\" ~ '^0x([0-9a-f]{128}|[0-9a-f]{130})$'"
+        },
+        "relationship_operation_target": {
+          "name": "relationship_operation_target",
+          "value": "\"basin\".\"relationship_operation\".\"kind\" = 'SETUP_NAMESPACE' or (\"basin\".\"relationship_operation\".\"approved_payee_id\" is not null and \"basin\".\"relationship_operation\".\"identity_id\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "basin.relationship_event": {
+      "name": "relationship_event",
+      "schema": "basin",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "relationship_event_id_seq",
+            "schema": "basin",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "operation_id": {
+          "name": "operation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_payee_id": {
+          "name": "approved_payee_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generation_id": {
+          "name": "generation_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "relationship_event_type",
+          "typeSchema": "basin",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_hash": {
+          "name": "transaction_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "log_index": {
+          "name": "log_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "relationship_event_operation_id_relationship_operation_id_fk": {
+          "name": "relationship_event_operation_id_relationship_operation_id_fk",
+          "tableFrom": "relationship_event",
+          "tableTo": "relationship_operation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "operation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_event_approved_payee_id_approved_payee_id_fk": {
+          "name": "relationship_event_approved_payee_id_approved_payee_id_fk",
+          "tableFrom": "relationship_event",
+          "tableTo": "approved_payee",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "approved_payee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_event_generation_id_approved_payee_generation_id_fk": {
+          "name": "relationship_event_generation_id_approved_payee_generation_id_fk",
+          "tableFrom": "relationship_event",
+          "tableTo": "approved_payee_generation",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "generation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "relationship_event_actor_user_id_user_id_fk": {
+          "name": "relationship_event_actor_user_id_user_id_fk",
+          "tableFrom": "relationship_event",
+          "tableTo": "user",
+          "schemaTo": "basin",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "relationship_event_operation_id_event_type_unique": {
+          "name": "relationship_event_operation_id_event_type_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "operation_id",
+            "event_type"
+          ]
+        },
+        "relationship_event_transaction_hash_log_index_unique": {
+          "name": "relationship_event_transaction_hash_log_index_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "transaction_hash",
+            "log_index"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "basin.organization_access_event_type": {
+      "name": "organization_access_event_type",
+      "schema": "basin",
+      "values": [
+        "INVITED",
+        "INVITATION_REVOKED",
+        "INVITATION_EXPIRED",
+        "JOINED",
+        "REINSTATED",
+        "REMOVED",
+        "LEFT"
+      ]
+    },
+    "basin.generation_end_reason": {
+      "name": "generation_end_reason",
+      "schema": "basin",
+      "values": [
+        "REVOKED",
+        "EXPIRED",
+        "REPLACED",
+        "SECURITY_ROOT_CHANGED"
+      ]
+    },
+    "basin.payment_event_type": {
+      "name": "payment_event_type",
+      "schema": "basin",
+      "values": [
+        "CREATED",
+        "AUTHORITY_VALIDATION_STARTED",
+        "BLOCKED",
+        "AUTHORITY_VALIDATED",
+        "APPROVAL_REQUESTED",
+        "EXECUTION_STARTED",
+        "EXECUTION_FAILED",
+        "SETTLEMENT_CONFIRMED"
+      ]
+    },
+    "basin.execution_path": {
+      "name": "execution_path",
+      "schema": "basin",
+      "values": [
+        "ROUTINE_SIGNER",
+        "PRIVY_INTENT"
+      ]
+    },
+    "basin.idempotency_scope": {
+      "name": "idempotency_scope",
+      "schema": "basin",
+      "values": [
+        "CREATE_PAYMENT"
+      ]
+    },
+    "basin.idempotency_status": {
+      "name": "idempotency_status",
+      "schema": "basin",
+      "values": [
+        "IN_PROGRESS",
+        "COMPLETED",
+        "FAILED_RETRYABLE"
+      ]
+    },
+    "basin.identity_status": {
+      "name": "identity_status",
+      "schema": "basin",
+      "values": [
+        "PENDING",
+        "ACTIVE",
+        "FAILED",
+        "REAPPROVAL_REQUIRED"
+      ]
+    },
+    "basin.invitation_operation_type": {
+      "name": "invitation_operation_type",
+      "schema": "basin",
+      "values": [
+        "CREATE_INVITATION",
+        "REPLACE_INVITATION"
+      ]
+    },
+    "basin.organization_invitation_status": {
+      "name": "organization_invitation_status",
+      "schema": "basin",
+      "values": [
+        "PENDING",
+        "ACCEPTED",
+        "REVOKED",
+        "EXPIRED"
+      ]
+    },
+    "basin.member_role": {
+      "name": "member_role",
+      "schema": "basin",
+      "values": [
+        "ADMIN",
+        "PAYMENT_OPERATOR"
+      ]
+    },
+    "basin.member_status": {
+      "name": "member_status",
+      "schema": "basin",
+      "values": [
+        "ACTIVE",
+        "REMOVED",
+        "LEFT"
+      ]
+    },
+    "basin.obligation_status": {
+      "name": "obligation_status",
+      "schema": "basin",
+      "values": [
+        "PENDING",
+        "ACTIVE",
+        "CONSUMED",
+        "CANCELLED",
+        "EXPIRED"
+      ]
+    },
+    "basin.payee_status": {
+      "name": "payee_status",
+      "schema": "basin",
+      "values": [
+        "PENDING",
+        "ACTIVE",
+        "EXPIRED",
+        "REVOKED",
+        "REAPPROVAL_REQUIRED"
+      ]
+    },
+    "basin.payment_status": {
+      "name": "payment_status",
+      "schema": "basin",
+      "values": [
+        "DRAFT",
+        "VALIDATING_AUTHORITY",
+        "BLOCKED",
+        "READY",
+        "AWAITING_APPROVAL",
+        "EXECUTING",
+        "FAILED",
+        "SETTLED"
+      ]
+    },
+    "basin.treasury_operation_status": {
+      "name": "treasury_operation_status",
+      "schema": "basin",
+      "values": [
+        "IN_PROGRESS",
+        "AWAITING_APPROVAL",
+        "COMPLETED",
+        "FAILED_RETRYABLE",
+        "FAILED_FINAL"
+      ]
+    },
+    "basin.treasury_operation_step": {
+      "name": "treasury_operation_step",
+      "schema": "basin",
+      "values": [
+        "STARTED",
+        "OWNER_QUORUM_VERIFIED",
+        "ORGANIZATION_VERIFIED",
+        "WALLET_VERIFIED",
+        "ROUTINE_SIGNER_VERIFIED",
+        "POLICY_VERIFIED",
+        "COMPLETE"
+      ]
+    },
+    "basin.treasury_operation_type": {
+      "name": "treasury_operation_type",
+      "schema": "basin",
+      "values": [
+        "PROVISION_TREASURY",
+        "ATTACH_ROUTINE_POLICY",
+        "RECONCILE_TREASURY",
+        "PROCESS_INTENT"
+      ]
+    },
+    "basin.treasury_status": {
+      "name": "treasury_status",
+      "schema": "basin",
+      "values": [
+        "NOT_STARTED",
+        "PROVISIONING",
+        "CONTROL_READY",
+        "AWAITING_APPROVAL",
+        "READY",
+        "NEEDS_ATTENTION",
+        "FAILED"
+      ]
+    },
+    "basin.webhook_processing_status": {
+      "name": "webhook_processing_status",
+      "schema": "basin",
+      "values": [
+        "RECEIVED",
+        "PROCESSED",
+        "IGNORED",
+        "FAILED_RETRYABLE"
+      ]
+    },
+    "basin.workspace_type": {
+      "name": "workspace_type",
+      "schema": "basin",
+      "values": [
+        "PERSONAL",
+        "ORGANIZATION"
+      ]
+    },
+    "basin.settlement_operation_status": {
+      "name": "settlement_operation_status",
+      "schema": "basin",
+      "values": [
+        "PREPARED",
+        "SUBMITTED",
+        "VERIFYING",
+        "CONFIRMED",
+        "FAILED",
+        "UNKNOWN",
+        "NEEDS_REVIEW"
+      ]
+    },
+    "basin.relationship_operation_kind": {
+      "name": "relationship_operation_kind",
+      "schema": "basin",
+      "values": [
+        "SETUP_NAMESPACE",
+        "PROPOSE",
+        "ACCEPT",
+        "REVOKE"
+      ]
+    },
+    "basin.relationship_operation_status": {
+      "name": "relationship_operation_status",
+      "schema": "basin",
+      "values": [
+        "PREPARED",
+        "AWAITING_AUTHORIZATION",
+        "SUBMITTED",
+        "CONFIRMED",
+        "FAILED",
+        "NEEDS_ATTENTION"
+      ]
+    },
+    "basin.relationship_operation_step": {
+      "name": "relationship_operation_step",
+      "schema": "basin",
+      "values": [
+        "REVIEWED",
+        "AUTHORIZATION_REQUIRED",
+        "NAMESPACE_SUBMITTED",
+        "REGISTRATION_SUBMITTED",
+        "ACCEPTANCE_SIGNED",
+        "ACTIVATION_SUBMITTED",
+        "REVOCATION_SUBMITTED",
+        "VERIFYING",
+        "COMPLETE"
+      ]
+    },
+    "basin.relationship_event_type": {
+      "name": "relationship_event_type",
+      "schema": "basin",
+      "values": [
+        "PROPOSAL_REGISTERED",
+        "ACCEPTANCE_ACTIVATED",
+        "REVOCATION_CONFIRMED",
+        "EXPIRY_OBSERVED",
+        "SECURITY_CHANGE_OBSERVED",
+        "GENERATION_REPLACED"
+      ]
+    }
+  },
+  "schemas": {
+    "basin": "basin"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

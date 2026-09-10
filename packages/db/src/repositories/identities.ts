@@ -18,6 +18,19 @@ import { found, requireMatch, safely } from "../errors";
 
 export function identityRepository(db: Database) {
   return {
+    read(identityId: bigint) {
+      return safely(async () => {
+        recordId.parse(identityId);
+        return found(
+          (
+            await db
+              .select()
+              .from(BasinIdentity)
+              .where(eq(BasinIdentity.id, identityId))
+          )[0],
+        );
+      });
+    },
     findByWorkspace(workspaceId: bigint) {
       return safely(async () => {
         recordId.parse(workspaceId);

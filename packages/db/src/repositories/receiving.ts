@@ -379,6 +379,7 @@ export function receivingRepository(db: Database) {
           | "receipt_block_number"
           | "receipt_block_hash"
           | "verified_at"
+          | "accepted_root_digest"
           | "error_code"
         >
       >,

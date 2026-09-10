@@ -386,8 +386,7 @@ export function relationshipRepository(db: Database | Transaction) {
           requireMatch(
             relationship.status === "ACTIVE" &&
               !current.ended_at &&
-              current.expires_at > new Date() &&
-              values.valid_from >= root.activated_at,
+              current.expires_at > new Date(),
           );
           const [previous] = await tx
             .select()
@@ -417,6 +416,7 @@ export function relationshipRepository(db: Database | Transaction) {
             requireMatch(
               BigInt(values.settlement_epoch) >
                 BigInt(previous.settlement_epoch) &&
+                values.valid_from >= root.activated_at &&
                 values.valid_from >= previous.valid_from,
             );
             await tx

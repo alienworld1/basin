@@ -36,6 +36,13 @@
       "when": 1788874473468,
       "tag": "0004_noisy_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788925243998,
+      "tag": "0005_bizarre_imperial_guard",
+      "breakpoints": true
     }
   ]
 }

@@ -22,3 +22,6 @@ export * from "./organization-treasury";
 export * from "./privy-provisioning-operation";
 export * from "./privy-webhook-receipt";
 export * from "./routine-signer-secret";
+export * from "./organization-namespace";
+export * from "./relationship-operation";
+export * from "./relationship-event";
