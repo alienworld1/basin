@@ -1,0 +1,24 @@
+{
+  "name": "@basin/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "deploy:activation": "node scripts/deploy-activation.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "viem": "^2.56.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "solc": "0.8.30",
+    "tsx": "^4.20.0",
+    "typescript": "^5"
+  }
+}
