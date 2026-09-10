@@ -6,11 +6,15 @@ export function ExpectedPaymentDetail({
   detail,
   busy,
   onCancel,
+  onAuthorize,
+  onCheckAuthorization,
   onBack,
 }: {
   detail: ExpectedPaymentDetailDto;
   busy: boolean;
   onCancel: () => void;
+  onAuthorize: () => void;
+  onCheckAuthorization?: () => void;
   onBack: () => void;
 }) {
   const cancelled = detail.status === "CANCELLED";
@@ -78,6 +82,25 @@ export function ExpectedPaymentDetail({
         <Button disabled={busy} onClick={onCancel}>
           {busy ? "Cancelling…" : "Cancel expected payment"}
         </Button>
+      ) : null}
+      {detail.canAuthorize ? (
+        <Button disabled={busy} onClick={onAuthorize}>
+          {busy ? "Authorizing payment…" : "Authorize payment"}
+        </Button>
+      ) : null}
+      {detail.authorization &&
+      ["SUBMITTED", "UNKNOWN_EXTERNAL_STATE"].includes(
+        detail.authorization.status,
+      ) &&
+      onCheckAuthorization ? (
+        <div className="space-y-3">
+          <p className="text-sm text-ink-secondary">
+            {detail.authorization.message}
+          </p>
+          <Button disabled={busy} onClick={onCheckAuthorization}>
+            Check authorization status
+          </Button>
+        </div>
       ) : null}
       {cancelled ? (
         <Button onClick={onBack}>Back to expected payments</Button>

@@ -32,6 +32,17 @@ export const cancelExpectedPaymentInput = z.strictObject({
   idempotencyKey,
 });
 
+export const authorizeExpectedPaymentInput = z.strictObject({
+  workspaceId: decimalId,
+  idempotencyKey,
+  walletAuthorizationSignature: z.string().min(1).max(20_000).optional(),
+  walletAuthorizationExpiry: z.number().int().positive().optional(),
+});
+
+export const reconcileExpectedPaymentAuthorizationInput = z.strictObject({
+  workspaceId: decimalId,
+});
+
 export function strictExpectedPaymentQuery(
   url: URL,
   allowed: readonly string[],

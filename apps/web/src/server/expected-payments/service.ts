@@ -111,10 +111,27 @@ function detailDto(row: ReadRow, access: Access): ExpectedPaymentDetailDto {
       row.expectedPayment.status === "EXPECTED" &&
       !row.expectedPayment.obligation_record_id &&
       !row.expectedPayment.payment_record_id,
+    canAuthorize:
+      !recipient &&
+      access.memberRole === "ADMIN" &&
+      row.expectedPayment.status === "EXPECTED" &&
+      !row.expectedPayment.obligation_record_id &&
+      !row.expectedPayment.payment_record_id,
     obligationId: row.expectedPayment.obligation_record_id?.toString(),
     paymentId: row.expectedPayment.payment_record_id?.toString(),
     receiptId: row.receiptId?.toString(),
   };
+}
+
+function authorizationMessage(status: NonNullable<ExpectedPaymentDetailDto["authorization"]>["status"]) {
+  return {
+    PREPARED: "Payment authorization is ready to submit.",
+    AWAITING_APPROVAL: "Waiting for organization wallet approval.",
+    SUBMITTED: "Payment authorization is being confirmed.",
+    UNKNOWN_EXTERNAL_STATE: "We couldn't confirm the authorization yet. Check its status.",
+    CONFIRMED: "Payment authorization is confirmed.",
+    FAILED: "Payment authorization failed. Create a new expected payment before trying again.",
+  }[status];
 }
 
 function payeeDto(
@@ -216,6 +233,7 @@ export function createExpectedPaymentService(
           statusLabel: "Needs attention",
           attentionReason:
             "This payee relationship changed. Review it before payment.",
+          canAuthorize: false,
         };
       }
       if (!relationship.eligible) {
@@ -224,6 +242,7 @@ export function createExpectedPaymentService(
           status: "ATTENTION",
           statusLabel: "Needs attention",
           attentionReason: "This payee is no longer approved for payment.",
+          canAuthorize: false,
         };
       }
     } catch {
@@ -233,9 +252,31 @@ export function createExpectedPaymentService(
         statusLabel: "Needs attention",
         attentionReason:
           "We couldn't verify this payee relationship right now.",
+        canAuthorize: false,
       };
     }
-    return result;
+    let authorization: ExpectedPaymentDetailDto["authorization"];
+    if (access.workspace.type === "ORGANIZATION" && organizationId) {
+      try {
+        const operation = await persistence.paymentAuthorizations.read(
+          organizationId,
+          id,
+        );
+        authorization = {
+          status: operation.status,
+          message: authorizationMessage(operation.status),
+        };
+      } catch {
+        // An expected payment has no authorization journal until an admin starts one.
+      }
+    }
+    return {
+      ...result,
+      authorization,
+      canAuthorize:
+        result.canAuthorize &&
+        (!authorization || ["PREPARED", "FAILED"].includes(authorization.status)),
+    };
   }
 
   async function create(input: {

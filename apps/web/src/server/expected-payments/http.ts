@@ -13,6 +13,8 @@ import { errorResponse, noStoreJson, requireSameOrigin } from "../auth/http";
 import { createAuthenticatedPersistence } from "../auth/persistence";
 import {
   cancelExpectedPaymentInput,
+  authorizeExpectedPaymentInput,
+  reconcileExpectedPaymentAuthorizationInput,
   createExpectedPaymentInput,
   decimalId,
   expectedPaymentDetailInput,
@@ -20,9 +22,10 @@ import {
   strictExpectedPaymentQuery,
 } from "./input";
 import { createExpectedPaymentService } from "./service";
+import { createExpectedPaymentAuthorizationService } from "./authorization";
 
 export type ExpectedPaymentHandlerKind =
-  "list" | "detail" | "create" | "cancel";
+  "list" | "detail" | "create" | "cancel" | "authorizePrepare" | "authorize" | "authorizeReconcile";
 
 export async function expectedPaymentHandler(
   request: Request,
@@ -49,9 +52,9 @@ export async function expectedPaymentHandler(
             }
           : {
               ...(await request.json()),
-              ...(kind === "cancel" ? { expectedPaymentId } : {}),
+              ...(["cancel", "authorizePrepare", "authorize", "authorizeReconcile"].includes(kind) ? { expectedPaymentId } : {}),
             };
-    if (kind === "create" || kind === "cancel") requireSameOrigin(request);
+    if (!["list", "detail"].includes(kind)) requireSameOrigin(request);
     const workspaceId = decimalId.parse(
       (raw as Record<string, unknown>).workspaceId,
     );
@@ -59,7 +62,7 @@ export async function expectedPaymentHandler(
     const user = await mapAuthenticatedUser(persistence, principal);
     const access = await requireWorkspaceAccess(persistence, user, workspaceId);
     if (
-      (kind === "create" || kind === "cancel") &&
+      !["list", "detail"].includes(kind) &&
       (access.workspace.type !== "ORGANIZATION" ||
         access.memberRole !== "ADMIN")
     ) {
@@ -89,6 +92,17 @@ export async function expectedPaymentHandler(
         idempotencyKey: input.idempotencyKey,
       });
       return noStoreJson(result, result.created ? 201 : 200);
+    }
+    if (kind === "authorizePrepare" || kind === "authorize") {
+      const input = authorizeExpectedPaymentInput.extend({ expectedPaymentId: decimalId }).parse(raw);
+      const authorizations = createExpectedPaymentAuthorizationService(persistence, access);
+      return noStoreJson(kind === "authorizePrepare"
+        ? await authorizations.prepare(BigInt(input.expectedPaymentId), input.idempotencyKey)
+        : await authorizations.submit(BigInt(input.expectedPaymentId), input.idempotencyKey, input.walletAuthorizationSignature, input.walletAuthorizationExpiry), 202);
+    }
+    if (kind === "authorizeReconcile") {
+      const input = reconcileExpectedPaymentAuthorizationInput.extend({ expectedPaymentId: decimalId }).parse(raw);
+      return noStoreJson(await createExpectedPaymentAuthorizationService(persistence, access).reconcile(BigInt(input.expectedPaymentId)), 202);
     }
     const input = cancelExpectedPaymentInput
       .extend({ expectedPaymentId: decimalId })

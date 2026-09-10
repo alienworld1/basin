@@ -41,9 +41,14 @@ export type ExpectedPaymentDetailDto = ExpectedPaymentRowDto & {
   generationLabel: string;
   authorityDescription: string;
   canCancel: boolean;
+  canAuthorize: boolean;
   obligationId?: string;
   paymentId?: string;
   receiptId?: string;
+  authorization?: {
+    status: "PREPARED" | "AWAITING_APPROVAL" | "SUBMITTED" | "UNKNOWN_EXTERNAL_STATE" | "CONFIRMED" | "FAILED";
+    message: string;
+  };
 };
 
 export type CreateExpectedPaymentResultDto = {

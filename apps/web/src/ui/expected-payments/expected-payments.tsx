@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useAuthorizationSignature } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
@@ -17,6 +18,7 @@ import { CreateExpectedPaymentForm } from "./create-expected-payment-form";
 import { ExpectedPaymentDetail } from "./expected-payment-detail";
 import { ExpectedPaymentList } from "./expected-payment-list";
 import { ExpectedPaymentSkeleton } from "./expected-payment-skeleton";
+import { formatExpectedAmount } from "./format-expected-amount";
 
 export function ExpectedPayments({
   workspace,
@@ -32,6 +34,7 @@ export function ExpectedPayments({
   onSessionEnded: () => void;
 }) {
   const auth = useBasinAuth();
+  const { generateAuthorizationSignature } = useAuthorizationSignature();
   const router = useRouter();
   const [list, setList] = useState<ExpectedPaymentListDto>();
   const [detail, setDetail] = useState<ExpectedPaymentDetailDto>();
@@ -265,6 +268,57 @@ export function ExpectedPayments({
     }
   };
 
+  const authorize = async () => {
+    if (!detail) return;
+    const idempotencyKey = crypto.randomUUID();
+    setBusy(true);
+    setError(undefined);
+    try {
+      const prepared = await request<{ review: { payee: string; amount: string; purpose: string } }>(
+        `/api/expected-payments/${detail.id}/authorize/prepare`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey }) },
+      );
+      if (!window.confirm(`${workspace.name} authorizes ${formatExpectedAmount(prepared.review.amount)} USDC for ${prepared.review.payee} for ${prepared.review.purpose}. Receiving details stay under the payee's control.`)) return;
+      let submitted = await request<{ operation: { status: string }; walletAuthorization?: { request: Parameters<typeof generateAuthorizationSignature>[0]; requestExpiry: number } }>(
+        `/api/expected-payments/${detail.id}/authorize`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey }) },
+      );
+      let attempts = 0;
+      while (submitted.walletAuthorization && attempts++ < 3) {
+        const { signature } = await generateAuthorizationSignature(submitted.walletAuthorization.request);
+        submitted = await request(
+          `/api/expected-payments/${detail.id}/authorize`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey, walletAuthorizationSignature: signature, walletAuthorizationExpiry: submitted.walletAuthorization.requestExpiry }) },
+        );
+      }
+      await request(`/api/expected-payments/${detail.id}/authorize/reconcile`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id }) });
+      await loadDetail(detail.id);
+      await loadList();
+      setAnnouncement("Payment authorized.");
+    } catch (caught) { setError((caught as Error).message); } finally { setBusy(false); }
+  };
+
+  const checkAuthorization = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await request(
+        `/api/expected-payments/${detail.id}/authorize/reconcile`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId: workspace.id }),
+        },
+      );
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const organization = workspace.type === "organization";
   return (
     <section
@@ -375,6 +429,8 @@ export function ExpectedPayments({
             detail={detail}
             busy={busy}
             onCancel={() => void cancel()}
+            onAuthorize={() => void authorize()}
+            onCheckAuthorization={() => void checkAuthorization()}
             onBack={closeSheet}
           />
         ) : (

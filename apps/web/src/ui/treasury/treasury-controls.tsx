@@ -1,6 +1,7 @@
 "use client";
 
 import { animated, useReducedMotion, useSpring } from "@react-spring/web";
+import { useAuthorizationSignature } from "@privy-io/react-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceSummary } from "../shell-types";
 import type {
@@ -29,10 +30,12 @@ export function TreasuryControls({
   onAccessChanged: () => Promise<void>;
 }) {
   const auth = useBasinAuth();
+  const { generateAuthorizationSignature } = useAuthorizationSignature();
   const [result, setResult] = useState<TreasuryStatusResponse>();
   const [loading, setLoading] = useState(true);
   const [mutating, setMutating] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewMode, setReviewMode] = useState<"account" | "payments">("account");
   const [requestError, setRequestError] = useState<string>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -116,7 +119,10 @@ export function TreasuryControls({
     };
   }, [load]);
 
-  const mutate = async (kind: "setup" | "reconcile") => {
+  const mutate = async (
+    kind: "setup" | "reconcile",
+    authorization?: { signature: string; requestExpiry: number },
+  ) => {
     setMutating(true);
     setRequestError(undefined);
     let key = sessionStorage.getItem(setupKey(workspace.id));
@@ -134,6 +140,12 @@ export function TreasuryControls({
           body: JSON.stringify({
             workspaceId: workspace.id,
             idempotencyKey: key,
+            ...(authorization
+              ? {
+                  walletAuthorizationSignature: authorization.signature,
+                  walletAuthorizationExpiry: authorization.requestExpiry,
+                }
+              : {}),
           }),
         },
       );
@@ -147,6 +159,16 @@ export function TreasuryControls({
       setResult(body);
       onTechnicalDetailsChange(body.technical);
       onPendingChange(body.summary.operation?.approvalPending ?? false);
+      if (body.walletAuthorization) {
+        const { signature } = await generateAuthorizationSignature(
+          body.walletAuthorization.request,
+        );
+        await mutate("setup", {
+          signature,
+          requestExpiry: body.walletAuthorization.requestExpiry,
+        });
+        return;
+      }
       if (
         !["FAILED", "PROVISIONING", "AWAITING_APPROVAL"].includes(
           body.summary.status,
@@ -174,7 +196,7 @@ export function TreasuryControls({
     "Create an organization account for Basin payments. Administrators control settings; payment operators receive limited access.";
   if (status === "CONTROL_READY") {
     title = "Organization account ready";
-    helper = "Payment controls will finish when Basin payments are enabled.";
+    helper = "Enable protected payments to allow only approved Basin payments through the reviewed Router.";
   } else if (status === "READY") {
     title = "Treasury controls ready";
     helper =
@@ -260,7 +282,10 @@ export function TreasuryControls({
           {status === "NOT_STARTED" || !status ? (
             <Button
               ref={triggerRef}
-              onClick={() => setReviewOpen(true)}
+              onClick={() => {
+                setReviewMode("account");
+                setReviewOpen(true);
+              }}
               disabled={mutating}
             >
               Review setup
@@ -270,8 +295,24 @@ export function TreasuryControls({
               {mutating ? "Resuming setup…" : "Resume setup"}
             </Button>
           ) : status === "CONTROL_READY" && result?.summary.routerConfigured ? (
-            <Button onClick={() => void mutate("setup")} disabled={mutating}>
-              {mutating ? "Finishing payment controls…" : "Resume setup"}
+            <Button
+              onClick={() => {
+                setReviewMode("payments");
+                setReviewOpen(true);
+              }}
+              disabled={mutating}
+            >
+              {mutating ? "Enabling protected payments…" : "Enable protected payments"}
+            </Button>
+          ) : status === "PROVISIONING" && result?.summary.operation?.step === "POLICY_VERIFIED" ? (
+            <Button
+              onClick={() => {
+                setReviewMode("payments");
+                setReviewOpen(true);
+              }}
+              disabled={mutating}
+            >
+              {mutating ? "Requesting approval…" : "Retry protected-payment approval"}
             </Button>
           ) : status === "NEEDS_ATTENTION" ? (
             <Button
@@ -292,6 +333,7 @@ export function TreasuryControls({
       ) : null}
       <TreasurySetupReview
         isOpen={reviewOpen}
+        mode={reviewMode}
         onClose={() => setReviewOpen(false)}
         onConfirm={() => void mutate("setup")}
         preparing={mutating}

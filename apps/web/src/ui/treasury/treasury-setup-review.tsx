@@ -6,6 +6,7 @@ import { Sheet } from "../sheet";
 
 export function TreasurySetupReview({
   isOpen,
+  mode,
   onClose,
   onConfirm,
   preparing,
@@ -13,6 +14,7 @@ export function TreasurySetupReview({
   routineLimit,
 }: {
   isOpen: boolean;
+  mode: "account" | "payments";
   onClose: () => void;
   onConfirm: () => void;
   preparing: boolean;
@@ -23,13 +25,15 @@ export function TreasurySetupReview({
   return (
     <Sheet
       isOpen={isOpen}
-      title="Review treasury setup"
+      title={mode === "account" ? "Review treasury setup" : "Enable protected payments"}
       onClose={onClose}
       returnFocusRef={triggerRef}
     >
       <div ref={headingRef} className="space-y-8">
         <p className="text-sm leading-relaxed text-ink-secondary">
-          Basin will prepare an organization account with separate control for treasury settings and routine payments.
+          {mode === "account"
+            ? "Basin will prepare an organization account with separate control for treasury settings and routine payments."
+            : "Basin will add a narrowly scoped payment rule to your existing organization account. It permits only approved Basin payments through the reviewed Router."}
         </p>
         <div className="border-y border-line py-6">
           <p className="text-sm font-semibold">Organization administrators control treasury settings.</p>
@@ -51,7 +55,13 @@ export function TreasurySetupReview({
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button className="border-transparent bg-transparent" onClick={onClose} disabled={preparing}>Cancel</Button>
           <Button onClick={onConfirm} disabled={preparing}>
-            {preparing ? "Preparing organization account…" : "Set up organization account"}
+            {preparing
+              ? mode === "account"
+                ? "Preparing organization account…"
+                : "Enabling protected payments…"
+              : mode === "account"
+                ? "Set up organization account"
+                : "Approve protected payments"}
           </Button>
         </div>
       </div>
