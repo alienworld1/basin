@@ -1,0 +1,22 @@
+{
+  "chainId": 11155111,
+  "version": "1",
+  "routerAddress": "0x38be3a868778df3fc6e37c25ebc4cf29f81077b2",
+  "verifierAddress": "0xb6b77926889b70b5a761cb3d82a28bec8e21624e",
+  "assetAddress": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  "assetSymbol": "USDC",
+  "deployerAddress": "0x6Bee0885A5d7c621215AD773a8c692a1bD16Aa60",
+  "verifierTransactionHash": "0x3ac3d6da7d68d499f39b1487734c25e980a53e33b52b0ba6c2127a1422b37020",
+  "routerTransactionHash": "0x0b6fef0ddf109b6fcb285cdf89b6c9f6711fa427f1a40e1010ddaa8ed9c5f2a7",
+  "verifierBlockNumber": "11674290",
+  "routerBlockNumber": "11674293",
+  "runtimeCodeHash": "0xd99c2104f630d8b5a8888b2de96b3fdad149d8d705b66698aa66e3470cd221f0",
+  "sourceDigest": "0x1421f77a46373400ec62c75995d308b056b292ef87fdcafb3fd66f70e2cb86c2",
+  "compiler": "solc 0.8.30",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200,
+    "viaIR": true
+  },
+  "verification": "read-back verified"
+}

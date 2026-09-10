@@ -8,6 +8,8 @@
   },
   "scripts": {
     "deploy:activation": "node scripts/deploy-activation.mjs",
+    "deploy:router": "node --env-file=../../.env scripts/deploy-router.mjs",
+    "verify:router": "node --env-file=../../.env scripts/verify-router.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts"
