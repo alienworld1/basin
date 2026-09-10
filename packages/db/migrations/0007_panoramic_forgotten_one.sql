@@ -1,0 +1,2 @@
+CREATE INDEX "expected_payment_created_by_member_id_index" ON "basin"."expected_payment" USING btree ("created_by_member_id");--> statement-breakpoint
+CREATE INDEX "expected_payment_cancelled_by_member_id_index" ON "basin"."expected_payment" USING btree ("cancelled_by_member_id");
