@@ -34,9 +34,14 @@ export function RelationshipList({
                 {row.statusLabel}
               </span>
               <span className="mt-1 block text-xs text-ink-tertiary">
-                {row.receivingStatus === "READY"
+                {row.status === "ACTIVE" && row.receivingStatus === "READY"
                   ? "Receiving verified"
-                  : "Receiving setup needed"}
+                  : row.status === "PENDING" &&
+                      row.receivingStatus !== "READY"
+                    ? "Receiving setup needed"
+                    : row.status === "ACTIVE"
+                      ? "Receiving unavailable"
+                      : "Relationship inactive"}
               </span>
             </span>
           </button>

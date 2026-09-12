@@ -1,6 +1,15 @@
 import type { ApprovedPayeeDetailDto } from "../../shared/approved-payee-types";
 import { Button } from "../button";
 
+function acceptanceLabel(status: ApprovedPayeeDetailDto["status"]) {
+  if (status === "ACTIVE") return "Accepted by recipient";
+  if (status === "PENDING") return "Recipient acceptance pending";
+  if (status === "REVOKED")
+    return "Acceptance ended when this relationship was revoked";
+  if (status === "EXPIRED") return "Acceptance ended when this approval expired";
+  return "Approval needs to be re-established";
+}
+
 export function RelationshipDetail({
   detail,
   busy,
@@ -69,9 +78,7 @@ export function RelationshipDetail({
         </p>
         <p>
           <span className="font-medium">
-            {detail.status === "ACTIVE"
-              ? "Accepted by recipient"
-              : "Recipient acceptance pending"}
+            {acceptanceLabel(detail.status)}
           </span>
           <br />
           <span className="text-ink-secondary">

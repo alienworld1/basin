@@ -734,7 +734,12 @@ export function createApprovedPayeeService(
     };
     let activationReady = false;
     const blockingReasons: string[] = [];
-    if (value.generation && value.relationship.relationship_name) {
+    const needsCurrentAuthority = ["PENDING", "ACTIVE"].includes(row.status);
+    if (
+      needsCurrentAuthority &&
+      value.generation &&
+      value.relationship.relationship_name
+    ) {
       try {
         const config = approvedPayeeConfiguration();
         activationReady = Boolean(config.activation);
@@ -809,20 +814,25 @@ export function createApprovedPayeeService(
           "We couldn't verify this relationship. Try again.",
         );
       }
-    } else {
+    } else if (needsCurrentAuthority) {
       blockingReasons.push("Organization authorization is not confirmed yet.");
     }
-    if (verification === "changed")
+    if (needsCurrentAuthority && verification === "changed")
       blockingReasons.push(
         "This payee's authority changed. A new approval and acceptance are needed.",
       );
-    if (verification === "unavailable" && blockingReasons.length === 0)
+    if (
+      needsCurrentAuthority &&
+      verification === "unavailable" &&
+      blockingReasons.length === 0
+    )
       blockingReasons.push("We couldn't verify this relationship. Try again.");
-    if (!activationReady)
+    if (needsCurrentAuthority && !activationReady)
       blockingReasons.push(
         "Relationship acceptance is temporarily unavailable while Basin's activation service is being configured.",
       );
-    if (!receivingReady) blockingReasons.push("Receiving setup needed.");
+    if (needsCurrentAuthority && !receivingReady)
+      blockingReasons.push("Receiving setup needed.");
     if (row.status === "PENDING")
       blockingReasons.push("Recipient acceptance is still needed.");
     if (["EXPIRED", "REVOKED", "REAPPROVAL_REQUIRED"].includes(row.status))
