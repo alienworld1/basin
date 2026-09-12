@@ -19,6 +19,10 @@ import { ExpectedPaymentDetail } from "./expected-payment-detail";
 import { ExpectedPaymentList } from "./expected-payment-list";
 import { ExpectedPaymentSkeleton } from "./expected-payment-skeleton";
 import { formatExpectedAmount } from "./format-expected-amount";
+import { PaymentReview } from "../payments/payment-review";
+import { PaymentReceiptHandoff } from "../payments/payment-receipt-handoff";
+import { PaymentAuthorityProgress } from "../payments/payment-authority-progress";
+import { PaymentProblem } from "../payments/payment-problem";
 
 export function ExpectedPayments({
   workspace,
@@ -48,6 +52,7 @@ export function ExpectedPayments({
   const listRef = useRef<ExpectedPaymentListDto | undefined>(undefined);
   const createKey = useRef(crypto.randomUUID());
   const cancelKey = useRef(crypto.randomUUID());
+  const paymentKey = useRef(crypto.randomUUID());
   const trigger = useRef<HTMLButtonElement>(null);
   const listSequence = useRef(0);
   const detailSequence = useRef(0);
@@ -180,7 +185,8 @@ export function ExpectedPayments({
       document.activeElement instanceof HTMLButtonElement
         ? document.activeElement
         : null;
-    router.push(`/app?workspace=${workspace.id}&expectedPayment=${id}`);
+    if (requestedExpectedPaymentId !== id)
+      router.push(`/app?workspace=${workspace.id}&expectedPayment=${id}`);
     void loadDetail(id);
   };
 
@@ -263,6 +269,34 @@ export function ExpectedPayments({
       await loadList();
     } catch (caught) {
       setError((caught as Error).message);
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refreshRelationship = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const updated = await request<ExpectedPaymentDetailDto>(
+        `/api/expected-payments/${detail.id}/relationship`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: workspace.id,
+            idempotencyKey: crypto.randomUUID(),
+          }),
+        },
+      );
+      setDetail(updated);
+      setAnnouncement("Expected payment updated to the current relationship.");
+      await loadList();
+    } catch (caught) {
+      setError((caught as Error).message);
+      await Promise.all([loadDetail(detail.id), loadList()]);
     } finally {
       setBusy(false);
     }
@@ -274,28 +308,63 @@ export function ExpectedPayments({
     setBusy(true);
     setError(undefined);
     try {
-      const prepared = await request<{ review: { payee: string; amount: string; purpose: string } }>(
-        `/api/expected-payments/${detail.id}/authorize/prepare`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey }) },
-      );
-      if (!window.confirm(`${workspace.name} authorizes ${formatExpectedAmount(prepared.review.amount)} USDC for ${prepared.review.payee} for ${prepared.review.purpose}. Receiving details stay under the payee's control.`)) return;
-      let submitted = await request<{ operation: { status: string }; walletAuthorization?: { request: Parameters<typeof generateAuthorizationSignature>[0]; requestExpiry: number } }>(
-        `/api/expected-payments/${detail.id}/authorize`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey }) },
-      );
+      const prepared = await request<{
+        review: { payee: string; amount: string; purpose: string };
+      }>(`/api/expected-payments/${detail.id}/authorize/prepare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey }),
+      });
+      if (
+        !window.confirm(
+          `${workspace.name} authorizes ${formatExpectedAmount(prepared.review.amount)} USDC for ${prepared.review.payee} for ${prepared.review.purpose}. Receiving details stay under the payee's control.`,
+        )
+      )
+        return;
+      let submitted = await request<{
+        operation: { status: string };
+        walletAuthorization?: {
+          request: Parameters<typeof generateAuthorizationSignature>[0];
+          requestExpiry: number;
+        };
+      }>(`/api/expected-payments/${detail.id}/authorize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey }),
+      });
       let attempts = 0;
       while (submitted.walletAuthorization && attempts++ < 3) {
-        const { signature } = await generateAuthorizationSignature(submitted.walletAuthorization.request);
+        const { signature } = await generateAuthorizationSignature(
+          submitted.walletAuthorization.request,
+        );
         submitted = await request(
           `/api/expected-payments/${detail.id}/authorize`,
-          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id, idempotencyKey, walletAuthorizationSignature: signature, walletAuthorizationExpiry: submitted.walletAuthorization.requestExpiry }) },
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: workspace.id,
+              idempotencyKey,
+              walletAuthorizationSignature: signature,
+              walletAuthorizationExpiry:
+                submitted.walletAuthorization.requestExpiry,
+            }),
+          },
         );
       }
-      await request(`/api/expected-payments/${detail.id}/authorize/reconcile`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId: workspace.id }) });
+      await request(`/api/expected-payments/${detail.id}/authorize/reconcile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id }),
+      });
       await loadDetail(detail.id);
       await loadList();
       setAnnouncement("Payment authorized.");
-    } catch (caught) { setError((caught as Error).message); } finally { setBusy(false); }
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const checkAuthorization = async () => {
@@ -303,14 +372,11 @@ export function ExpectedPayments({
     setBusy(true);
     setError(undefined);
     try {
-      await request(
-        `/api/expected-payments/${detail.id}/authorize/reconcile`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workspaceId: workspace.id }),
-        },
-      );
+      await request(`/api/expected-payments/${detail.id}/authorize/reconcile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id }),
+      });
       await Promise.all([loadDetail(detail.id), loadList()]);
     } catch (caught) {
       setError((caught as Error).message);
@@ -318,6 +384,128 @@ export function ExpectedPayments({
       setBusy(false);
     }
   };
+  const pay = async () => {
+    if (!detail?.paymentExecution) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await request(`/api/expected-payments/${detail.id}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace.id,
+          operationId: detail.paymentExecution.id,
+        }),
+      });
+      setAnnouncement("Payment submitted. We're confirming settlement.");
+      try {
+        await request(`/api/expected-payments/${detail.id}/payment/reconcile`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId: workspace.id }),
+        });
+      } catch {
+        setError(
+          "The payment was submitted, but settlement is not confirmed yet. Check its status before trying again.",
+        );
+      }
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } catch (caught) {
+      setError((caught as Error).message);
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const reviewPayment = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await request(`/api/expected-payments/${detail.id}/payment/prepare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace.id,
+          idempotencyKey: paymentKey.current,
+        }),
+      });
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } catch (caught) {
+      setError((caught as Error).message);
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const checkPayment = async () => {
+    if (!detail) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await request(`/api/expected-payments/${detail.id}/payment/reconcile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace.id }),
+      });
+      await Promise.all([loadDetail(detail.id), loadList()]);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    const expectedPaymentId = detail?.id;
+    const status = detail?.paymentExecution?.status;
+    if (
+      sheet !== "detail" ||
+      !expectedPaymentId ||
+      !status ||
+      !["SUBMITTING", "SUBMITTED", "UNKNOWN_EXTERNAL_STATE"].includes(status)
+    )
+      return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
+    const poll = async () => {
+      try {
+        const result = await request<{
+          operation: { status: string };
+        }>(`/api/expected-payments/${expectedPaymentId}/payment/reconcile`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId: workspace.id }),
+        });
+        if (!active) return;
+        await Promise.all([loadDetail(expectedPaymentId), loadList()]);
+        if (
+          active &&
+          attempts++ < 23 &&
+          ["SUBMITTING", "SUBMITTED", "UNKNOWN_EXTERNAL_STATE"].includes(
+            result.operation.status,
+          )
+        )
+          timer = setTimeout(poll, 5_000);
+      } catch {
+        if (active && attempts++ < 23) timer = setTimeout(poll, 10_000);
+      }
+    };
+    timer = setTimeout(poll, 3_000);
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    detail?.id,
+    detail?.paymentExecution?.status,
+    loadDetail,
+    loadList,
+    request,
+    sheet,
+    workspace.id,
+  ]);
 
   const organization = workspace.type === "organization";
   return (
@@ -349,9 +537,7 @@ export function ExpectedPayments({
       {loading && !list ? <ExpectedPaymentSkeleton /> : null}
       {error && !sheet ? (
         <div className="mt-6" role="alert">
-          <p className="text-sm text-state-danger">
-            We couldn&apos;t load expected payments. Try again.
-          </p>
+          <p className="text-sm text-state-danger">{error}</p>
           <Button className="mt-3" onClick={() => void loadList()}>
             Try again
           </Button>
@@ -425,14 +611,58 @@ export function ExpectedPayments({
         returnFocusRef={trigger}
       >
         {detail ? (
-          <ExpectedPaymentDetail
-            detail={detail}
-            busy={busy}
-            onCancel={() => void cancel()}
-            onAuthorize={() => void authorize()}
-            onCheckAuthorization={() => void checkAuthorization()}
-            onBack={closeSheet}
-          />
+          detail.paymentExecution?.status === "CONFIRMED" ||
+          (detail.status === "SATISFIED" && detail.receiptId) ? (
+            <PaymentReceiptHandoff detail={detail} />
+          ) : detail.paymentExecution?.status === "READY" &&
+            detail.paymentExecution.review ? (
+            <PaymentReview
+              review={detail.paymentExecution.review}
+              busy={busy}
+              expired={
+                !detail.paymentExecution.reviewExpiresAt ||
+                new Date(detail.paymentExecution.reviewExpiresAt) <= new Date()
+              }
+              onPay={() => void pay()}
+              onRefresh={() => void reviewPayment()}
+              onBack={closeSheet}
+            />
+          ) : detail.paymentExecution &&
+            ["BLOCKED", "FAILED"].includes(detail.paymentExecution.status) ? (
+            <PaymentProblem
+              execution={detail.paymentExecution}
+              busy={busy}
+              onReviewAgain={() => void reviewPayment()}
+              onCheck={() => void checkPayment()}
+              onBack={closeSheet}
+            />
+          ) : detail.paymentExecution &&
+            [
+              "PREPARED",
+              "VALIDATING",
+              "AWAITING_APPROVAL",
+              "SUBMITTING",
+              "SUBMITTED",
+              "UNKNOWN_EXTERNAL_STATE",
+            ].includes(detail.paymentExecution.status) ? (
+            <PaymentAuthorityProgress
+              execution={detail.paymentExecution}
+              busy={busy}
+              onCheck={() => void checkPayment()}
+            />
+          ) : (
+            <ExpectedPaymentDetail
+              detail={detail}
+              busy={busy}
+              onCancel={() => void cancel()}
+              onRefreshRelationship={() => void refreshRelationship()}
+              onAuthorize={() => void authorize()}
+              onCheckAuthorization={() => void checkAuthorization()}
+              onReviewPayment={() => void reviewPayment()}
+              onCheckPayment={() => void checkPayment()}
+              onBack={closeSheet}
+            />
+          )
         ) : (
           <p className="text-sm text-ink-secondary">
             Loading expected payment…

@@ -49,13 +49,23 @@ export function Sheet({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     const breakpoint = window.matchMedia("(min-width: 768px)");
     const closeAcrossBreakpoint = () => {
       if (isOpen) onClose();
     };
 
     breakpoint.addEventListener("change", closeAcrossBreakpoint);
-    return () => breakpoint.removeEventListener("change", closeAcrossBreakpoint);
+    return () =>
+      breakpoint.removeEventListener("change", closeAcrossBreakpoint);
   }, [isOpen, onClose]);
 
   return (

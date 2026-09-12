@@ -1,20 +1,29 @@
 import type { ExpectedPaymentDetailDto } from "../../shared/expected-payment-types";
 import { Button } from "../button";
 import { formatExpectedAmount } from "./format-expected-amount";
+import { ExpectedPaymentRelationshipUpdate } from "./expected-payment-relationship-update";
 
 export function ExpectedPaymentDetail({
   detail,
   busy,
   onCancel,
+  onRefreshRelationship,
   onAuthorize,
   onCheckAuthorization,
+  onReviewPayment,
+  onCheckPayment,
+  onViewReceipt,
   onBack,
 }: {
   detail: ExpectedPaymentDetailDto;
   busy: boolean;
   onCancel: () => void;
+  onRefreshRelationship: () => void;
   onAuthorize: () => void;
   onCheckAuthorization?: () => void;
+  onReviewPayment?: () => void;
+  onCheckPayment?: () => void;
+  onViewReceipt?: () => void;
   onBack: () => void;
 }) {
   const cancelled = detail.status === "CANCELLED";
@@ -78,6 +87,20 @@ export function ExpectedPaymentDetail({
       <p className="text-sm leading-relaxed text-ink-secondary">
         {detail.authorityDescription}
       </p>
+      {detail.relationshipUpdate ? (
+        <ExpectedPaymentRelationshipUpdate
+          payeeName={detail.payeeName}
+          previousGenerationLabel={
+            detail.relationshipUpdate.previousGenerationLabel
+          }
+          currentGenerationLabel={
+            detail.relationshipUpdate.currentGenerationLabel
+          }
+          canAdopt={detail.relationshipUpdate.canAdopt}
+          busy={busy}
+          onAdopt={onRefreshRelationship}
+        />
+      ) : null}
       {detail.canCancel ? (
         <Button disabled={busy} onClick={onCancel}>
           {busy ? "Cancelling…" : "Cancel expected payment"}
@@ -88,6 +111,15 @@ export function ExpectedPaymentDetail({
           {busy ? "Authorizing payment…" : "Authorize payment"}
         </Button>
       ) : null}
+      {detail.paymentAction?.canReview && onReviewPayment ? (
+        <Button disabled={busy} onClick={onReviewPayment}>
+          Review payment
+        </Button>
+      ) : null}
+      {detail.paymentAction?.message ? (
+        <div className="space-y-3"><p className="text-sm text-ink-secondary">{detail.paymentAction.message}</p>{detail.paymentAction.status === "PROCESSING" && onCheckPayment ? <Button disabled={busy} onClick={onCheckPayment}>Check payment status</Button> : null}</div>
+      ) : null}
+      {detail.status === "SATISFIED" && detail.receiptId && onViewReceipt ? <Button onClick={onViewReceipt}>View receipt</Button> : null}
       {detail.authorization &&
       ["SUBMITTED", "UNKNOWN_EXTERNAL_STATE"].includes(
         detail.authorization.status,
