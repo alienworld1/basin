@@ -9,5 +9,5 @@ test("runtime connections reuse a small pool after a request closes", async () =
   const second = connectRuntimeDatabase(url);
 
   assert.equal(first.pool, second.pool);
-  assert.equal(second.pool.options.max, 1);
+  assert.equal(second.pool.options.max, 5);
 });

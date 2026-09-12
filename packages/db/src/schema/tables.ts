@@ -14,6 +14,7 @@ export * from "./obligation";
 export * from "./expected-payment";
 export * from "./expected-payment-operation";
 export * from "./payment-authorization-operation";
+export * from "./payment-execution-operation";
 export * from "./payment";
 export * from "./payment-event";
 export * from "./payment-authority-snapshot";

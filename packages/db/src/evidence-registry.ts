@@ -69,3 +69,23 @@ export function attestObligation(
   evidenceKinds.set(value, "obligation");
   return value as import("./evidence").VerifiedObligation;
 }
+
+export function attestExecution(value: { payment_id: bigint; execution_path: "ROUTINE_SIGNER" | "PRIVY_INTENT" }) {
+  evidenceKinds.set(value, "execution");
+  return value as import("./evidence").VerifiedExecution;
+}
+
+export function attestSettlement(value: {
+  payment_id: bigint;
+  snapshot: Record<string, unknown>;
+  transaction_hash: string;
+  block_number: string;
+  settled_at: Date;
+  chain_id: number;
+  payer_organization_name: string;
+  payee_display_name: string;
+  asset_symbol: string;
+}) {
+  evidenceKinds.set(value as object, "settlement");
+  return value as unknown as import("./evidence").VerifiedSettlement;
+}
