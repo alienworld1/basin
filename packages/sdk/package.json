@@ -1,0 +1,72 @@
+{
+  "name": "basin-sdk",
+  "version": "0.1.0",
+  "description": "Framework-independent TypeScript SDK for the Basin payment protocol",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alienworld1/basin.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/alienworld1/basin#readme",
+  "bugs": {
+    "url": "https://github.com/alienworld1/basin/issues"
+  },
+  "keywords": [
+    "basin",
+    "payments",
+    "treasury",
+    "ethereum",
+    "sepolia",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:consumer": "pnpm run build && tsc --noEmit -p consumer/tsconfig.json",
+    "check:package": "publint --pack false --strict && attw --pack . --profile esm-only",
+    "pack:check": "pnpm run build && pnpm run check:package && pnpm pack --dry-run",
+    "prepack": "pnpm run build",
+    "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run test:consumer && pnpm run check:package",
+    "smoke:sepolia": "tsx scripts/smoke-sepolia.ts"
+  },
+  "dependencies": {
+    "viem": "^2.56.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@basin/contracts": "workspace:*",
+    "@basin/ens": "workspace:*",
+    "@types/node": "^20.19.43",
+    "publint": "^0.3.24",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5"
+  }
+}

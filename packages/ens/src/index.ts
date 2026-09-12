@@ -11,3 +11,5 @@ export * from "./settlement";
 export * from "./relationships";
 export * from "./relationship-provisioning";
 export * from "./organization";
+// Public protocol consumers need the checked-in ENSv2 interfaces for read-only verification.
+export { registryAbi, resolverAbi, factoryAbi } from "./abis";
