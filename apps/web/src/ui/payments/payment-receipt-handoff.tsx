@@ -2,8 +2,10 @@ import type { ExpectedPaymentDetailDto } from "../../shared/expected-payment-typ
 
 export function PaymentReceiptHandoff({
   detail,
+  onViewReceipt,
 }: {
   detail: ExpectedPaymentDetailDto;
+  onViewReceipt?: () => void;
 }) {
   return (
     <section className="space-y-6" aria-labelledby="receipt-handoff-heading">
@@ -31,9 +33,13 @@ export function PaymentReceiptHandoff({
         before creating this receipt.
       </p>
       {detail.receiptId ? (
-        <p className="font-mono text-xs text-ink-tertiary">
-          Receipt {detail.receiptId}
-        </p>
+        <button
+          type="button"
+          onClick={onViewReceipt}
+          className="focus-ring min-h-11 text-sm font-medium underline underline-offset-4"
+        >
+          View receipt
+        </button>
       ) : null}
     </section>
   );

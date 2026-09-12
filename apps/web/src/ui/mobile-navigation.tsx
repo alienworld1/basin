@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Sheet } from "./sheet";
@@ -21,6 +21,7 @@ export function MobileNavigation({
   accountControl,
 }: MobileNavigationProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [openInspectorAfterMenu, setOpenInspectorAfterMenu] = useState(false);
@@ -66,15 +67,26 @@ export function MobileNavigation({
               </Link>
             </li>
             {navigation.map((item) => {
+              const target = new URL(item.href, "http://basin.local");
+              const section = target.searchParams.get("section");
               const isCurrent =
-                pathname === item.href ||
-                (item.match === "prefix" &&
-                  pathname.startsWith(`${item.href}/`));
+                pathname === target.pathname &&
+                (section
+                  ? searchParams.get("section") === section
+                  : !searchParams.get("section"));
+              if (
+                searchParams.get("workspace") &&
+                !target.searchParams.get("workspace")
+              )
+                target.searchParams.set(
+                  "workspace",
+                  searchParams.get("workspace")!,
+                );
 
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    href={`${target.pathname}${target.search}`}
                     aria-current={isCurrent ? "page" : undefined}
                     onClick={() => setIsMenuOpen(false)}
                     className="focus-ring flex min-h-11 items-center border-b border-line text-sm font-medium"

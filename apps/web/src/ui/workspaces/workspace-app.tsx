@@ -20,6 +20,7 @@ import type { IdentityTechnicalDetails } from "../../shared/identity-types";
 import type { TreasuryTechnicalDetails } from "../../shared/treasury-types";
 import type { RelationshipTechnicalDetails } from "../../shared/approved-payee-types";
 import { ActiveWorkspace } from "./active-workspace";
+import { ActivitySurface } from "../activity/activity-surface";
 import { WorkspaceChooser } from "./workspace-chooser";
 import { WorkspaceOnboarding } from "./workspace-onboarding";
 
@@ -28,6 +29,8 @@ type WorkspaceAppProps = {
   requestedRelationshipId?: string;
   requestedReceivingRelationshipId?: string;
   requestedExpectedPaymentId?: string;
+  requestedSection?: string;
+  requestedReceiptId?: string;
   navigation: NavigationItem[];
   inspectorDetails: InspectorDetails;
 };
@@ -47,6 +50,8 @@ export function WorkspaceApp({
   requestedRelationshipId,
   requestedReceivingRelationshipId,
   requestedExpectedPaymentId,
+  requestedSection,
+  requestedReceiptId,
   navigation,
   inspectorDetails,
 }: WorkspaceAppProps) {
@@ -210,7 +215,11 @@ export function WorkspaceApp({
       setRelationshipDetails(undefined);
       setRelationshipPending(false);
       setSelectedOverride({ id: workspace.id, from: requestedWorkspaceId });
-      startNavigation(() => router.replace(`/app?workspace=${workspace.id}`));
+      startNavigation(() =>
+        router.replace(
+          `/app?workspace=${workspace.id}${requestedSection === "activity" ? "&section=activity" : ""}`,
+        ),
+      );
       return true;
     } catch {
       setStatus("error");
@@ -362,24 +371,30 @@ export function WorkspaceApp({
       />
     );
   } else {
-    content = (
-      <ActiveWorkspace
-        key={activeWorkspace.id}
-        workspace={activeWorkspace}
-        requestedRelationshipId={requestedRelationshipId}
-        requestedReceivingRelationshipId={requestedReceivingRelationshipId}
-        requestedExpectedPaymentId={requestedExpectedPaymentId}
-        userId={result!.user.id}
-        onIdentityDetailsChange={handleIdentityDetails}
-        onPendingChange={handleIdentityPending}
-        onTreasuryDetailsChange={handleTreasuryDetails}
-        onTreasuryPendingChange={handleTreasuryPending}
-        onRelationshipDetailsChange={handleRelationshipDetails}
-        onRelationshipPendingChange={handleRelationshipPending}
-        onSessionEnded={handleSessionEnded}
-        onAccessChanged={recoverWorkspaceAccess}
-      />
-    );
+    content =
+      requestedSection === "activity" ? (
+        <ActivitySurface
+          workspaceId={activeWorkspace.id}
+          receiptId={requestedReceiptId}
+        />
+      ) : (
+        <ActiveWorkspace
+          key={activeWorkspace.id}
+          workspace={activeWorkspace}
+          requestedRelationshipId={requestedRelationshipId}
+          requestedReceivingRelationshipId={requestedReceivingRelationshipId}
+          requestedExpectedPaymentId={requestedExpectedPaymentId}
+          userId={result!.user.id}
+          onIdentityDetailsChange={handleIdentityDetails}
+          onPendingChange={handleIdentityPending}
+          onTreasuryDetailsChange={handleTreasuryDetails}
+          onTreasuryPendingChange={handleTreasuryPending}
+          onRelationshipDetailsChange={handleRelationshipDetails}
+          onRelationshipPendingChange={handleRelationshipPending}
+          onSessionEnded={handleSessionEnded}
+          onAccessChanged={recoverWorkspaceAccess}
+        />
+      );
   }
 
   return (

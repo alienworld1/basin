@@ -613,7 +613,14 @@ export function ExpectedPayments({
         {detail ? (
           detail.paymentExecution?.status === "CONFIRMED" ||
           (detail.status === "SATISFIED" && detail.receiptId) ? (
-            <PaymentReceiptHandoff detail={detail} />
+            <PaymentReceiptHandoff
+              detail={detail}
+              onViewReceipt={() =>
+                router.push(
+                  `/app?workspace=${workspace.id}&section=activity&receipt=${detail.receiptId}`,
+                )
+              }
+            />
           ) : detail.paymentExecution?.status === "READY" &&
             detail.paymentExecution.review ? (
             <PaymentReview

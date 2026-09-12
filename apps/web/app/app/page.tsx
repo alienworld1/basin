@@ -8,6 +8,11 @@ const navigation = [
     href: "/app",
     match: "exact",
   },
+  {
+    label: "Activity",
+    href: "/app?section=activity",
+    match: "exact",
+  },
 ] satisfies NavigationItem[];
 
 export default async function WorkspacePage({
@@ -42,6 +47,12 @@ export default async function WorkspacePage({
       : Array.isArray(expectedPaymentQuery)
         ? "invalid"
         : undefined;
+  const sectionQuery = query.section;
+  const requestedSection =
+    typeof sectionQuery === "string" ? sectionQuery : undefined;
+  const receiptQuery = query.receipt;
+  const requestedReceiptId =
+    typeof receiptQuery === "string" ? receiptQuery : undefined;
   const health = getEnvironmentHealth();
   const inspectorDetails: InspectorDetails = {
     environment: health.environment,
@@ -57,6 +68,8 @@ export default async function WorkspacePage({
       requestedRelationshipId={requestedRelationshipId}
       requestedReceivingRelationshipId={requestedReceivingRelationshipId}
       requestedExpectedPaymentId={requestedExpectedPaymentId}
+      requestedSection={requestedSection}
+      requestedReceiptId={requestedReceiptId}
       navigation={navigation}
       inspectorDetails={inspectorDetails}
     />
