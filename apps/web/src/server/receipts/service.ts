@@ -1,8 +1,7 @@
 import "server-only";
 
-import { basinRouterAbi } from "@basin/contracts";
 import { formatUsdcBaseUnits } from "@basin/domain";
-import { parseEventLogs } from "viem";
+import { decodeBasinEvent } from "basin-sdk";
 import type { createPersistence } from "@basin/db";
 import type {
   ReceiptDetailDto,
@@ -160,17 +159,20 @@ export async function verifyReceipt(
         mismatches: ["TRANSACTION_STATUS"],
       };
     }
-    const events = parseEventLogs({
-      abi: basinRouterAbi,
-      logs: transaction.logs,
-      eventName: "ObligationExecuted",
-      strict: true,
-    }).filter(
-      (event) =>
-        event.address.toLowerCase() ===
-          row.receipt.router_address.toLowerCase() &&
-        event.args.paymentId === row.payment.payment_id,
-    );
+    const events = transaction.logs.flatMap((log) => {
+      try {
+        const event = decodeBasinEvent(
+          log,
+          row.receipt.router_address as `0x${string}`,
+        );
+        return event.name === "ObligationExecuted" &&
+          event.args.paymentId === row.payment.payment_id
+          ? [event]
+          : [];
+      } catch {
+        return [];
+      }
+    });
     if (events.length !== 1)
       return {
         status: "MISMATCH",
@@ -184,7 +186,7 @@ export async function verifyReceipt(
     if (event.obligationId !== row.snapshot.obligation_protocol_id)
       mismatch.push("OBLIGATION");
     if (
-      event.organization?.toLowerCase() !==
+      String(event.organization).toLowerCase() !==
       row.snapshot.organization_wallet_address.toLowerCase()
     )
       mismatch.push("ORGANIZATION");
@@ -201,7 +203,10 @@ export async function verifyReceipt(
       mismatch.push("SETTLEMENT_COMMITMENT");
     if (event.amount !== BigInt(row.receipt.amount_base_units))
       mismatch.push("AMOUNT");
-    if (event.asset?.toLowerCase() !== row.receipt.asset_address.toLowerCase())
+    if (
+      String(event.asset).toLowerCase() !==
+      row.receipt.asset_address.toLowerCase()
+    )
       mismatch.push("ASSET");
     if (event.metadataHash !== row.receipt.obligation_metadata_hash)
       mismatch.push("OBLIGATION");
