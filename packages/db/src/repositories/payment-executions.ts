@@ -33,6 +33,7 @@ export function paymentExecutionRepository(db: Database) {
                 recordId.parse(organizationId),
               ),
               inArray(PaymentExecutionOperation.status, [
+                "SUBMITTING",
                 "SUBMITTED",
                 "UNKNOWN_EXTERNAL_STATE",
               ]),

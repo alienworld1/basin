@@ -1,4 +1,12 @@
-import { integer, jsonb, text, unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  check,
+  integer,
+  jsonb,
+  text,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 import { ApprovedPayee } from "./approved-payee";
 import { ApprovedPayeeGeneration } from "./approved-payee-generation";
@@ -20,8 +28,7 @@ export const RelationshipEvent = basin.table(
   {
     id: id(),
     operation_id: reference()
-      .references(() => RelationshipOperation.id, { onDelete: "restrict" })
-      .notNull(),
+      .references(() => RelationshipOperation.id, { onDelete: "restrict" }),
     approved_payee_id: reference()
       .references(() => ApprovedPayee.id, { onDelete: "restrict" })
       .notNull(),
@@ -36,11 +43,19 @@ export const RelationshipEvent = basin.table(
     evidence: jsonb().$type<Record<string, unknown>>().notNull(),
     transaction_hash: text(),
     log_index: integer(),
+    observation_key: text(),
     created_at: time().defaultNow().notNull(),
   },
   (t) => [
     unique().on(t.operation_id, t.event_type),
     unique().on(t.transaction_hash, t.log_index),
+    uniqueIndex("relationship_event_observation_key_unique")
+      .on(t.observation_key)
+      .where(sql`${t.observation_key} is not null`),
+    check(
+      "relationship_event_origin",
+      sql`(${t.operation_id} is not null and ${t.observation_key} is null) or (${t.operation_id} is null and ${t.observation_key} is not null and ${t.event_type} in ('EXPIRY_OBSERVED', 'SECURITY_CHANGE_OBSERVED', 'GENERATION_REPLACED'))`,
+    ),
   ],
 );
 

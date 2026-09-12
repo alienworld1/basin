@@ -9,6 +9,7 @@ import {
   ApprovedPayeeGeneration,
   ApprovedSecurityRoot,
   BasinIdentity,
+  ExpectedPayment,
   Organization,
   OrganizationNamespace,
   RelationshipEvent,
@@ -383,6 +384,29 @@ export function approvedPayeeRepository(db: Database) {
         ),
       );
     },
+    operationByIdempotency(values: {
+      organizationId: bigint;
+      actorUserId: bigint;
+      kind: typeof RelationshipOperation.$inferSelect.kind;
+      idempotencyKey: string;
+    }) {
+      return safely(
+        async () =>
+          (
+            await db
+              .select()
+              .from(RelationshipOperation)
+              .where(
+                and(
+                  eq(RelationshipOperation.organization_id, values.organizationId),
+                  eq(RelationshipOperation.actor_user_id, values.actorUserId),
+                  eq(RelationshipOperation.kind, values.kind),
+                  eq(RelationshipOperation.idempotency_key, values.idempotencyKey),
+                ),
+              )
+          )[0] ?? null,
+      );
+    },
     updateOperation(
       operationId: bigint,
       values: Partial<typeof RelationshipOperation.$inferInsert>,
@@ -565,7 +589,7 @@ export function approvedPayeeRepository(db: Database) {
     }) {
       return safely(() =>
         db.transaction(async (tx) => {
-          found(
+          const relationship = found(
             (
               await tx
                 .select()
@@ -592,6 +616,24 @@ export function approvedPayeeRepository(db: Database) {
               updated_at: new Date(),
             })
             .where(eq(ApprovedPayee.id, values.relationshipId));
+          await tx
+            .update(ExpectedPayment)
+            .set({
+              status: "ATTENTION",
+              status_reason_code: "RELATIONSHIP_INACTIVE",
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(ExpectedPayment.organization_id, relationship.organization_id),
+                eq(ExpectedPayment.approved_payee_id, values.relationshipId),
+                eq(
+                  ExpectedPayment.approved_payee_generation_id,
+                  values.generationId,
+                ),
+                inArray(ExpectedPayment.status, ["EXPECTED", "READY", "ATTENTION"]),
+              ),
+            );
           await tx
             .insert(RelationshipEvent)
             .values({
@@ -624,23 +666,136 @@ export function approvedPayeeRepository(db: Database) {
         }),
       );
     },
+    observeRelationshipEnd(values: {
+      organizationId: bigint;
+      relationshipId: bigint;
+      generationId: bigint;
+      status: "EXPIRED" | "REAPPROVAL_REQUIRED";
+      occurredAt: Date;
+      observationKey: string;
+      evidence: Record<string, unknown>;
+    }) {
+      return safely(() =>
+        db.transaction(async (tx) => {
+          const relationship = found(
+            (
+              await tx
+                .select()
+                .from(ApprovedPayee)
+                .where(
+                  and(
+                    eq(ApprovedPayee.id, values.relationshipId),
+                    eq(ApprovedPayee.organization_id, values.organizationId),
+                  ),
+                )
+                .for("update")
+            )[0],
+          );
+          if (relationship.status === values.status) return relationship;
+          if (!["PENDING", "ACTIVE"].includes(relationship.status))
+            return relationship;
+          const [generation] = await tx
+            .select()
+            .from(ApprovedPayeeGeneration)
+            .where(
+              and(
+                eq(ApprovedPayeeGeneration.id, values.generationId),
+                eq(
+                  ApprovedPayeeGeneration.approved_payee_id,
+                  values.relationshipId,
+                ),
+                isNull(ApprovedPayeeGeneration.ended_at),
+              ),
+            )
+            .for("update");
+          if (!generation) return relationship;
+          await tx
+            .update(ApprovedPayeeGeneration)
+            .set({
+              ended_at: values.occurredAt,
+              end_reason:
+                values.status === "EXPIRED"
+                  ? "EXPIRED"
+                  : "SECURITY_ROOT_CHANGED",
+            })
+            .where(eq(ApprovedPayeeGeneration.id, generation.id));
+          const [updated] = await tx
+            .update(ApprovedPayee)
+            .set({
+              status: values.status,
+              revoked_at: null,
+              updated_at: new Date(),
+            })
+            .where(eq(ApprovedPayee.id, relationship.id))
+            .returning();
+          await tx
+            .update(ExpectedPayment)
+            .set({
+              status: "ATTENTION",
+              status_reason_code:
+                values.status === "REAPPROVAL_REQUIRED"
+                  ? "REAPPROVAL_REQUIRED"
+                  : "RELATIONSHIP_INACTIVE",
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(ExpectedPayment.organization_id, values.organizationId),
+                eq(ExpectedPayment.approved_payee_id, values.relationshipId),
+                eq(
+                  ExpectedPayment.approved_payee_generation_id,
+                  values.generationId,
+                ),
+                inArray(ExpectedPayment.status, ["EXPECTED", "READY", "ATTENTION"]),
+              ),
+            );
+          await tx
+            .insert(RelationshipEvent)
+            .values({
+              operation_id: null,
+              approved_payee_id: values.relationshipId,
+              generation_id: values.generationId,
+              event_type:
+                values.status === "EXPIRED"
+                  ? "EXPIRY_OBSERVED"
+                  : "SECURITY_CHANGE_OBSERVED",
+              actor_user_id: null,
+              occurred_at: values.occurredAt,
+              evidence: values.evidence,
+              observation_key: values.observationKey,
+            })
+            .onConflictDoNothing();
+          return found(updated);
+        }),
+      );
+    },
     addEvent(values: typeof RelationshipEvent.$inferInsert) {
       return safely(async () =>
-        found(
-          (
-            await db
-              .insert(RelationshipEvent)
-              .values(values)
-              .onConflictDoUpdate({
-                target: [
-                  RelationshipEvent.operation_id,
-                  RelationshipEvent.event_type,
-                ],
-                set: { operation_id: values.operation_id },
-              })
-              .returning()
-          )[0],
-        ),
+        db.transaction(async (tx) => {
+          const [inserted] = await tx
+            .insert(RelationshipEvent)
+            .values(values)
+            .onConflictDoNothing()
+            .returning();
+          if (inserted) return inserted;
+          const [existing] = values.observation_key
+            ? await tx
+                .select()
+                .from(RelationshipEvent)
+                .where(eq(RelationshipEvent.observation_key, values.observation_key))
+            : values.operation_id
+              ? await tx
+                  .select()
+                  .from(RelationshipEvent)
+                  .where(
+                    and(
+                      eq(RelationshipEvent.operation_id, values.operation_id),
+                      eq(RelationshipEvent.event_type, values.event_type),
+                    ),
+                  )
+              : [];
+          return found(existing);
+        }),
       );
     },
   };

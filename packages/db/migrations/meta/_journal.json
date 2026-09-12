@@ -92,6 +92,13 @@
       "when": 1789196652484,
       "tag": "0012_expected_payment_relationship_refresh",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789204997891,
+      "tag": "0013_fixed_talos",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,4 @@
+ALTER TABLE "basin"."relationship_event" ALTER COLUMN "operation_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "basin"."relationship_event" ADD COLUMN "observation_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "relationship_event_observation_key_unique" ON "basin"."relationship_event" USING btree ("observation_key") WHERE "basin"."relationship_event"."observation_key" is not null;--> statement-breakpoint
+ALTER TABLE "basin"."relationship_event" ADD CONSTRAINT "relationship_event_origin" CHECK (("basin"."relationship_event"."operation_id" is not null and "basin"."relationship_event"."observation_key" is null) or ("basin"."relationship_event"."operation_id" is null and "basin"."relationship_event"."observation_key" is not null and "basin"."relationship_event"."event_type" in ('EXPIRY_OBSERVED', 'SECURITY_CHANGE_OBSERVED', 'GENERATION_REPLACED')));
