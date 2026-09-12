@@ -39,6 +39,44 @@ test("approved-payee requests accept identifiers and intent, never authority ove
     );
 });
 
+test("revocation reasons are optional, normalized, bounded, and request-scoped", () => {
+  assert.deepEqual(
+    prepareInput.parse({
+      workspaceId: "2",
+      action: "REVOKE",
+      relationshipId: "7",
+      reason: "  Duplicate supplier record  ",
+      idempotencyKey,
+    }),
+    {
+      workspaceId: "2",
+      action: "REVOKE",
+      relationshipId: "7",
+      reason: "Duplicate supplier record",
+      idempotencyKey,
+    },
+  );
+  assert.throws(() =>
+    prepareInput.parse({
+      workspaceId: "2",
+      action: "REVOKE",
+      relationshipId: "7",
+      reason: "x".repeat(241),
+      idempotencyKey,
+    }),
+  );
+  assert.throws(() =>
+    prepareInput.parse({
+      workspaceId: "2",
+      action: "REVOKE",
+      relationshipId: "7",
+      reason: "Duplicate",
+      idempotencyKey,
+      organizationId: "1",
+    }),
+  );
+});
+
 test("recipient authorization and reconciliation constrain signed evidence", () => {
   assert.doesNotThrow(() =>
     acceptPrepareInput.parse({ workspaceId: "1", idempotencyKey }),
@@ -62,6 +100,17 @@ test("recipient authorization and reconciliation constrain signed evidence", () 
       workspaceId: "1",
       operationId: "16",
       transactionHash: "0x1234",
+    }),
+  );
+  assert.deepEqual(
+    reconcileInput.parse({ workspaceId: "1", relationshipId: "16" }),
+    { workspaceId: "1", relationshipId: "16" },
+  );
+  assert.throws(() =>
+    reconcileInput.parse({
+      workspaceId: "1",
+      operationId: "16",
+      relationshipId: "16",
     }),
   );
 });

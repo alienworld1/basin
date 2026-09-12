@@ -79,6 +79,11 @@ export function ReceiptDocument({
           <dd className="mt-1 wrap-anywhere">{receipt.payeeIdentity}</dd>
         </div>
       </dl>
+      {receipt.currentRelationshipStatus === "REVOKED" ? (
+        <p className="mt-5 text-sm text-ink-secondary">
+          This relationship is currently revoked. It was active when this payment settled.
+        </p>
+      ) : null}
       <div className="mt-6" aria-live="polite">
         <p
           className={

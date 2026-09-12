@@ -18,6 +18,10 @@ import { Sheet } from "../sheet";
 import type { WorkspaceSummary } from "../shell-types";
 import { ApprovalReview } from "./approval-review";
 import { ReapprovalReview } from "./reapproval-review";
+import {
+  RevocationReview,
+  type RevocationPhase,
+} from "./revocation-review";
 import { RelationshipDetail } from "./relationship-detail";
 import { RelationshipList } from "./relationship-list";
 import { useRelationshipWallet } from "./use-relationship-wallet";
@@ -63,9 +67,12 @@ export function ApprovedPayees({
     "approval" | "detail" | "setup" | "reapprove" | "revoke" | null
   >(null);
   const [busy, setBusy] = useState(false);
+  const [revocationPhase, setRevocationPhase] =
+    useState<RevocationPhase>("idle");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const trigger = useRef<HTMLButtonElement>(null);
+  const revocationKey = useRef(crypto.randomUUID());
   const listSequence = useRef(0);
   const detailSequence = useRef(0);
 
@@ -216,7 +223,10 @@ export function ApprovedPayees({
     }
   };
 
-  const authorizeOrganizationOperation = async (operationId: string) => {
+  const authorizeOrganizationOperation = async (
+    operationId: string,
+    onAuthorizationRequested?: () => void,
+  ) => {
     let authorized = await request<PreparedRelationshipDto>(
       "/api/approved-payees/authorize",
       {
@@ -227,6 +237,7 @@ export function ApprovedPayees({
     );
     let authorizationCount = 0;
     while (authorized.walletAuthorization) {
+      onAuthorizationRequested?.();
       if (authorizationCount >= 3) {
         throw new Error(
           "The organization wallet requested too many authorization steps. Check its current state before retrying.",
@@ -341,9 +352,11 @@ export function ApprovedPayees({
     }
   };
 
-  const revoke = async () => {
+  const revoke = async (reason?: string) => {
     if (!detail) return;
     setBusy(true);
+    setRevocationPhase("preparing");
+    setError(undefined);
     try {
       const prepared = await request<PreparedRelationshipDto>(
         "/api/approved-payees/prepare",
@@ -354,23 +367,29 @@ export function ApprovedPayees({
             workspaceId: workspace.id,
             action: "REVOKE",
             relationshipId: detail.id,
-            idempotencyKey: crypto.randomUUID(),
+            ...(reason ? { reason } : {}),
+            idempotencyKey: revocationKey.current,
           }),
         },
       );
+      setRevocationPhase("authorizing");
       const authorized = await authorizeOrganizationOperation(
         prepared.operation.id,
+        () => setRevocationPhase("authorizing"),
       );
       if (authorized.operation.status !== "CONFIRMED") {
         setError(authorized.operation.message);
         return;
       }
+      setRevocationPhase("checking");
       await loadDetail(detail.id);
+      await loadList();
       setSheet("detail");
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
       setBusy(false);
+      setRevocationPhase("idle");
     }
   };
 
@@ -423,7 +442,25 @@ export function ApprovedPayees({
 
   const checkStatus = async () => {
     if (!detail?.operation) {
-      if (detail) await loadDetail(detail.id);
+      if (detail) {
+        setBusy(true);
+        setError(undefined);
+        try {
+          await request("/api/approved-payees/reconcile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: workspace.id,
+              relationshipId: detail.id,
+            }),
+          });
+          await Promise.all([loadDetail(detail.id), loadList()]);
+        } catch (caught) {
+          setError((caught as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }
       return;
     }
     setBusy(true);
@@ -677,7 +714,12 @@ export function ApprovedPayees({
               setError(undefined);
               setSheet("reapprove");
             }}
-            onRevoke={() => setSheet("revoke")}
+            onRevoke={() => {
+              revocationKey.current = crypto.randomUUID();
+              setRevocationPhase("idle");
+              setError(undefined);
+              setSheet("revoke");
+            }}
             onCheck={() => void checkStatus()}
             onCreateExpectedPayment={
               detail.eligible && detail.canRevoke && onCreateExpectedPayment
@@ -730,26 +772,19 @@ export function ApprovedPayees({
         returnFocusRef={trigger}
       >
         {detail ? (
-          <div className="space-y-6">
-            <p className="font-medium">Revoke {detail.payeeName}?</p>
-            <p className="text-sm leading-relaxed text-ink-secondary">
-              This ends {detail.organizationName}&apos;s approval. It won&apos;t
-              change {detail.payeeName}&apos;s identity or receiving account.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button disabled={busy} onClick={() => void revoke()}>
-                {busy ? "Preparing revocation…" : "Revoke payee"}
-              </Button>
-              <Button disabled={busy} onClick={() => setSheet("detail")}>
-                Keep approval
-              </Button>
-            </div>
-            {error ? (
-              <p role="alert" className="text-sm text-state-danger">
-                {error}
-              </p>
-            ) : null}
-          </div>
+          <RevocationReview
+            detail={detail}
+            phase={revocationPhase}
+            error={error}
+            onRevoke={(reason) => void revoke(reason)}
+            onKeepApproval={() => setSheet("detail")}
+            onReviewLatest={() => {
+              revocationKey.current = crypto.randomUUID();
+              setError(undefined);
+              setSheet("detail");
+              void loadDetail(detail.id);
+            }}
+          />
         ) : null}
       </Sheet>
     </section>

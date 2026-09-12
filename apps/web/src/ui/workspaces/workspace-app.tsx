@@ -152,11 +152,6 @@ export function WorkspaceApp({
     void Promise.resolve().then(() => bootstrap());
   }, [auth.authenticated, auth.ready, bootstrap, router]);
 
-  if (!auth.ready || (status === "loading" && !result)) {
-    return <LoadingSkeleton />;
-  }
-  if (!auth.authenticated) return <LoadingSkeleton />;
-
   const workspaces = result?.workspaces ?? [];
   const selectedId =
     selectedOverride && selectedOverride.from === requestedWorkspaceId
@@ -164,6 +159,20 @@ export function WorkspaceApp({
       : requestedWorkspaceId;
   const activeWorkspace =
     workspaces.find((item) => item.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.type !== "organization") return;
+    void authenticatedRequest(auth.getAccessToken, "/api/activity/reconcile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId: activeWorkspace.id }),
+    });
+  }, [activeWorkspace, auth.getAccessToken]);
+
+  if (!auth.ready || (status === "loading" && !result)) {
+    return <LoadingSkeleton />;
+  }
+  if (!auth.authenticated) return <LoadingSkeleton />;
 
   const accountControl = (
     <AccountControl

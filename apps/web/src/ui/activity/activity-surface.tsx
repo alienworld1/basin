@@ -42,7 +42,13 @@ export function ActivitySurface({
   const loadActivity = useCallback(async () => {
     setLoading(true);
     setError(undefined);
-    controller.current?.abort();
+    try {
+      controller.current?.abort();
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        throw error;
+      }
+    }
     controller.current = new AbortController();
     try {
       const response = await request(
