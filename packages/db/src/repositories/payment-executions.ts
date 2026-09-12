@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { DomainError, recordId } from "@basin/domain";
 import type { Database } from "../client";
@@ -19,6 +19,29 @@ import {
 
 export function paymentExecutionRepository(db: Database) {
   return {
+    unresolvedExpectedPaymentIds(organizationId: bigint, limit = 10) {
+      return safely(async () =>
+        db
+          .select({
+            expectedPaymentId: PaymentExecutionOperation.expected_payment_id,
+          })
+          .from(PaymentExecutionOperation)
+          .where(
+            and(
+              eq(
+                PaymentExecutionOperation.organization_id,
+                recordId.parse(organizationId),
+              ),
+              inArray(PaymentExecutionOperation.status, [
+                "SUBMITTED",
+                "UNKNOWN_EXTERNAL_STATE",
+              ]),
+            ),
+          )
+          .orderBy(desc(PaymentExecutionOperation.updated_at))
+          .limit(limit),
+      );
+    },
     context(organizationId: bigint, expectedPaymentId: bigint) {
       const organizationWorkspace = alias(
         Workspace,

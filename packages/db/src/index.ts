@@ -13,6 +13,7 @@ import { approvedPayeeRepository } from "./repositories/approved-payees";
 import { expectedPaymentRepository } from "./repositories/expected-payments";
 import { paymentAuthorizationRepository } from "./repositories/payment-authorizations";
 import { paymentExecutionRepository } from "./repositories/payment-executions";
+import { activityRepository } from "./repositories/activity";
 export { databaseHealth } from "./health";
 export type { DatabaseHealth } from "./health";
 export type * from "./evidence";
@@ -43,6 +44,7 @@ export function createPersistence(connectionString: string) {
     expectedPayments: expectedPaymentRepository(connection.db),
     paymentAuthorizations: paymentAuthorizationRepository(connection.db),
     paymentExecutions: paymentExecutionRepository(connection.db),
+    activity: activityRepository(connection.db),
     close: connection.close,
   };
 }
