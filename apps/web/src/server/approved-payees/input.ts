@@ -60,15 +60,21 @@ export const authorizeInput = z.strictObject({
     .optional(),
   walletAuthorizationExpiry: z.number().int().positive().optional(),
 });
-export const reconcileInput = z.strictObject({
-  workspaceId: id,
-  operationId: id,
-  transactionHash: z
-    .string()
-    .regex(/^0x[0-9a-fA-F]{64}$/)
-    .transform((value) => value.toLowerCase())
-    .optional(),
-});
+export const reconcileInput = z.union([
+  z.strictObject({
+    workspaceId: id,
+    operationId: id,
+    transactionHash: z
+      .string()
+      .regex(/^0x[0-9a-fA-F]{64}$/)
+      .transform((value) => value.toLowerCase())
+      .optional(),
+  }),
+  z.strictObject({
+    workspaceId: id,
+    relationshipId: id,
+  }),
+]);
 
 export function strictQuery(url: URL, allowed: readonly string[]) {
   for (const key of url.searchParams.keys()) {

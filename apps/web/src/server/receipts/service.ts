@@ -46,7 +46,14 @@ export async function readReceipt(
 }
 
 export function receiptDto(row: ReceiptRow): ReceiptDetailDto {
-  const { receipt, payment, snapshot, payee } = row;
+  const { receipt, payment, snapshot, payee, relationship } = row;
+  const currentRelationshipStatus = [
+    "REVOKED",
+    "EXPIRED",
+    "REAPPROVAL_REQUIRED",
+  ].includes(relationship.status)
+    ? (relationship.status as ReceiptDetailDto["currentRelationshipStatus"])
+    : undefined;
   return {
     id: receipt.id.toString(),
     paymentId: payment.id.toString(),
@@ -63,6 +70,7 @@ export function receiptDto(row: ReceiptRow): ReceiptDetailDto {
     relationshipTokenId: snapshot.relationship_token_id,
     relationshipExpiry: snapshot.relationship_expiry.toISOString(),
     relationshipStatusAtPayment: "ACTIVE",
+    ...(currentRelationshipStatus ? { currentRelationshipStatus } : {}),
     settlementEpoch: snapshot.settlement_epoch,
     verification: { status: "CHECKING", summary: "Checking receipt evidence…" },
     technical: {

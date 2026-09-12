@@ -17,6 +17,7 @@ export type ReceiptDetailDto = {
   relationshipTokenId: string;
   relationshipExpiry: string;
   relationshipStatusAtPayment: "ACTIVE";
+  currentRelationshipStatus?: "REVOKED" | "EXPIRED" | "REAPPROVAL_REQUIRED";
   settlementEpoch: string;
   verification: { status: "CHECKING"; summary: string };
   technical: {

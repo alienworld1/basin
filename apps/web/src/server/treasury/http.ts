@@ -101,42 +101,43 @@ export async function privyWebhookHandler(request: Request) {
     ) {
       try {
         if (eventType.startsWith("intent.") && resourceId) {
-        const operation = await persistence.treasury.operationByIntent(resourceId);
-        if (operation) {
-          const current = await createPrivyTreasuryAdapter().getIntent(resourceId);
-          if (current.status === "pending") {
-            await persistence.treasury.updateOperation(operation.id, {
-              status: "AWAITING_APPROVAL",
-              expires_at: current.expiresAt,
-            });
-          } else if (current.status === "executed") {
-            // The event prompts a fresh resource read; it is never treated as readiness proof.
-            await persistence.treasury.updateOperation(operation.id, {
-              status: "IN_PROGRESS",
-              privy_intent_id: null,
-            });
-            await persistence.treasury.saveTreasury({
-              organization_id: operation.organization_id,
-              status: "NEEDS_ATTENTION",
-              last_error_code: "RECONCILIATION_REQUIRED",
-            });
-          } else {
-            await persistence.treasury.updateOperation(operation.id, {
-              status: "FAILED_FINAL",
-              safe_error_code:
-                current.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
-            });
-            await persistence.treasury.saveTreasury({
-              organization_id: operation.organization_id,
-              status: "FAILED",
-              last_error_code:
-                current.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
-            });
+          const operation = await persistence.treasury.operationByIntent(resourceId);
+          if (operation) {
+            const current = await createPrivyTreasuryAdapter().getIntent(resourceId);
+            if (current.status === "pending") {
+              await persistence.treasury.updateOperation(operation.id, {
+                status: "AWAITING_APPROVAL",
+                expires_at: current.expiresAt,
+              });
+            } else if (current.status === "executed") {
+              // The event prompts a fresh resource read; it is never treated as readiness proof.
+              await persistence.treasury.updateOperation(operation.id, {
+                status: "IN_PROGRESS",
+                privy_intent_id: null,
+              });
+              await persistence.treasury.saveTreasury({
+                organization_id: operation.organization_id,
+                status: "NEEDS_ATTENTION",
+                last_error_code: "RECONCILIATION_REQUIRED",
+              });
+            } else {
+              await persistence.treasury.updateOperation(operation.id, {
+                status: "FAILED_FINAL",
+                safe_error_code:
+                  current.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
+              });
+              await persistence.treasury.saveTreasury({
+                organization_id: operation.organization_id,
+                status: "FAILED",
+                last_error_code:
+                  current.status === "expired" ? "INTENT_EXPIRED" : "INTENT_REJECTED",
+              });
+            }
           }
         }
-        }
         await persistence.treasury.updateWebhook(stored.receipt.id, {
-          processing_status: eventType.startsWith("intent.") ? "PROCESSED" : "IGNORED",
+          processing_status:
+            eventType.startsWith("intent.") ? "PROCESSED" : "IGNORED",
           processed_at: new Date(),
         });
       } catch {

@@ -155,6 +155,154 @@ export function createApprovedPayeeService(
   const workspaceId = access.workspace.id;
   const organizationId = access.organizationId;
 
+  async function reconcileCurrentRelationship(relationshipId: bigint) {
+    const value = await persistence.approvedPayees.detail(relationshipId);
+    const organizationViewer =
+      access.workspace.type === "ORGANIZATION" &&
+      access.organizationId === value.organization.id;
+    const recipientViewer =
+      access.workspace.type === "PERSONAL" &&
+      access.workspace.id === value.identity.workspace_id;
+    if (!organizationViewer && !recipientViewer)
+      throw new DomainError("NOT_FOUND", "We couldn't find that relationship.");
+    if (
+      !value.generation ||
+      !value.relationship.relationship_name ||
+      !["PENDING", "ACTIVE"].includes(value.relationship.status)
+    )
+      return value;
+    const now = new Date();
+    if (value.generation.expires_at <= now) {
+      await persistence.approvedPayees.observeRelationshipEnd({
+        organizationId: value.organization.id,
+        relationshipId,
+        generationId: value.generation.id,
+        status: "EXPIRED",
+        occurredAt: value.generation.expires_at,
+        observationKey: hashRequest([
+          relationshipId.toString(),
+          value.generation.id.toString(),
+          "EXPIRY_OBSERVED",
+          value.generation.expires_at.toISOString(),
+        ]),
+        evidence: {
+          relationshipTokenId: value.generation.relationship_token_id,
+          expiresAt: value.generation.expires_at.toISOString(),
+        },
+      });
+      return persistence.approvedPayees.detail(relationshipId);
+    }
+    try {
+      const config = approvedPayeeConfiguration();
+      const observed = await createRelationshipReader(config.ens).observe({
+        name: value.relationship.relationship_name,
+        identityName: value.identity.ens_name,
+        controller: getAddress(value.identity.controller_address),
+        identityEpoch: BigInt(value.identity.identity_epoch),
+        tokenId: BigInt(value.generation.relationship_token_id),
+        registry: getAddress(value.generation.relationship_registry_address),
+      });
+      let securityChanged =
+        observed.tokenId !== BigInt(value.generation.relationship_token_id);
+      if (value.root) {
+        securityChanged ||=
+          observed.profile !== value.root.security_root_commitment ||
+          observed.identityEpoch.toString() !== value.root.identity_epoch ||
+          observed.controller.toLowerCase() !==
+            value.root.identity_controller.toLowerCase() ||
+          observed.resolver.toLowerCase() !==
+            value.root.resolver_proxy_address.toLowerCase() ||
+          observed.implementation.toLowerCase() !==
+            value.root.resolver_implementation_address.toLowerCase() ||
+          observed.implementationCodeHash !==
+            value.root.resolver_implementation_code_hash ||
+          observed.resolverProfile !==
+            value.root.resolver_permission_profile_hash ||
+          observed.registryProfile !== value.root.registry_permission_profile_hash;
+        if (!securityChanged && config.activation) {
+          const accepted = await createPublicClient({
+            chain: sepolia,
+            transport: http(config.ens.rpcUrl, {
+              timeout: 8_000,
+              retryCount: 1,
+            }),
+          }).readContract({
+            address: config.activation.address,
+            abi: basinRouterActivationAbi,
+            functionName: "acceptedRoot",
+            args: [
+              getAddress(value.root.organization_wallet_address),
+              value.generation.relationship_namehash as `0x${string}`,
+              BigInt(value.generation.relationship_token_id),
+            ],
+            blockNumber: observed.blockNumber,
+          });
+          securityChanged =
+            accepted[0] !== value.root.security_root_commitment ||
+            accepted[1] !== value.root.payee_id ||
+            accepted[2] !==
+              BigInt(
+                Math.floor(
+                  value.root.accepted_relationship_expiry.getTime() / 1000,
+                ),
+              ) ||
+            accepted[3] !== BigInt(value.root.acceptance_nonce);
+        }
+      }
+      if (securityChanged) {
+        const occurredAt = new Date(Number(observed.timestamp) * 1000);
+        await persistence.approvedPayees.observeRelationshipEnd({
+          organizationId: value.organization.id,
+          relationshipId,
+          generationId: value.generation.id,
+          status: "REAPPROVAL_REQUIRED",
+          occurredAt,
+          observationKey: hashRequest([
+            relationshipId.toString(),
+            value.generation.id.toString(),
+            "SECURITY_CHANGE_OBSERVED",
+            observed.blockNumber.toString(),
+          ]),
+          evidence: {
+            blockNumber: observed.blockNumber.toString(),
+            relationshipTokenId: observed.tokenId.toString(),
+            observedSecurityRoot: observed.profile,
+            acceptedSecurityRoot: value.root?.security_root_commitment ?? null,
+          },
+        });
+        return persistence.approvedPayees.detail(relationshipId);
+      }
+      return value;
+    } catch (error) {
+      if (
+        error instanceof SettlementError &&
+        ["RELATIONSHIP_INACTIVE", "REAPPROVAL_REQUIRED", "NEEDS_REVIEW"].includes(
+          error.code,
+        )
+      ) {
+        await persistence.approvedPayees.observeRelationshipEnd({
+          organizationId: value.organization.id,
+          relationshipId,
+          generationId: value.generation.id,
+          status: "REAPPROVAL_REQUIRED",
+          occurredAt: now,
+          observationKey: hashRequest([
+            relationshipId.toString(),
+            value.generation.id.toString(),
+            "SECURITY_CHANGE_OBSERVED",
+            "unavailable-live-generation",
+          ]),
+          evidence: { classification: "LIVE_AUTHORITY_INACTIVE" },
+        });
+        return persistence.approvedPayees.detail(relationshipId);
+      }
+      throw new DomainError(
+        "UNAVAILABLE",
+        "We couldn't verify this relationship. Try again.",
+      );
+    }
+  }
+
   async function list(
     cursor?: bigint,
     limit = 25,
@@ -709,6 +857,7 @@ export function createApprovedPayeeService(
       canRevoke:
         organizationViewer &&
         access.memberRole === "ADMIN" &&
+        verification === "verified" &&
         ["PENDING", "ACTIVE"].includes(row.status),
       canReapprove:
         organizationViewer &&
@@ -741,10 +890,33 @@ export function createApprovedPayeeService(
     ) {
       throw new DomainError(
         "INVALID_INPUT",
-        "Only an organization administrator can change payee approvals.",
+        "You don't have permission to revoke this payee.",
       );
     }
-    const value = await persistence.approvedPayees.detail(relationshipId);
+    const value = await reconcileCurrentRelationship(relationshipId);
+    if (value.relationship.status === "REVOKED") {
+      const existing = await persistence.approvedPayees.operationByIdempotency({
+        organizationId,
+        actorUserId,
+        kind: "REVOKE",
+        idempotencyKey,
+      });
+      if (
+        existing &&
+        existing.approved_payee_id === relationshipId &&
+        existing.review_snapshot.reason === (reason ?? null)
+      ) {
+        return {
+          operation: operationDto(existing),
+          relationshipId: relationshipId.toString(),
+        };
+      }
+      if (existing)
+        throw new DomainError(
+          "CONFLICT",
+          "This request was already used for different details.",
+        );
+    }
     if (
       value.organization.id !== organizationId ||
       !value.generation ||
@@ -752,9 +924,15 @@ export function createApprovedPayeeService(
         currentStatus(value.relationship.status, value.relationship.expires_at),
       )
     ) {
+      if (value.relationship.status === "EXPIRED") {
+        throw new DomainError(
+          "CONFLICT",
+          "This approval expired before revocation completed.",
+        );
+      }
       throw new DomainError(
         "CONFLICT",
-        "The relationship changed. Review the latest details before trying again.",
+        "This relationship changed. Review the latest details before trying again.",
       );
     }
     const operation = await persistence.approvedPayees.operation({
@@ -774,9 +952,15 @@ export function createApprovedPayeeService(
       step: "AUTHORIZATION_REQUIRED",
       review_snapshot: {
         version: 1,
+        relationshipId: value.relationship.id.toString(),
+        organizationId: value.organization.id.toString(),
         relationshipName: value.relationship.relationship_name,
         relationshipTokenId: value.generation.relationship_token_id,
         generationId: value.generation.id.toString(),
+        expiresAt: value.generation.expires_at.toISOString(),
+        securityRootCommitment: value.root?.security_root_commitment ?? null,
+        actorUserId: actorUserId.toString(),
+        actorWorkspaceId: workspaceId.toString(),
         reason: reason ?? null,
       },
       review_expires_at: new Date(Date.now() + 5 * 60 * 1000),
@@ -1173,7 +1357,9 @@ export function createApprovedPayeeService(
       ) {
         throw new DomainError(
           "INVALID_INPUT",
-          "Only an organization administrator can change payee approvals.",
+          operation.kind === "REVOKE"
+            ? "You don't have permission to revoke this payee."
+            : "Only an organization administrator can change payee approvals.",
         );
       }
       const treasury = await persistence.treasury.byOrganization(
@@ -1338,25 +1524,44 @@ export function createApprovedPayeeService(
         if (
           typeof snapshot.relationshipName !== "string" ||
           typeof snapshot.relationshipTokenId !== "string" ||
-          typeof snapshot.generationId !== "string"
+          typeof snapshot.generationId !== "string" ||
+          typeof snapshot.relationshipId !== "string" ||
+          typeof snapshot.organizationId !== "string" ||
+          typeof snapshot.expiresAt !== "string" ||
+          !(
+            snapshot.securityRootCommitment === null ||
+            typeof snapshot.securityRootCommitment === "string"
+          )
         ) {
           throw new DomainError(
             "CONFLICT",
             "Review the relationship again before continuing.",
           );
         }
-        const current = await persistence.approvedPayees.detail(
+        const current = await reconcileCurrentRelationship(
           operation.approved_payee_id,
         );
+        if (current.relationship.status === "EXPIRED") {
+          throw new DomainError(
+            "CONFLICT",
+            "This approval expired before revocation completed.",
+          );
+        }
         if (
           !current.generation ||
+          !["PENDING", "ACTIVE"].includes(current.relationship.status) ||
           current.generation.id !== BigInt(snapshot.generationId) ||
           current.generation.relationship_token_id !==
-            snapshot.relationshipTokenId
+            snapshot.relationshipTokenId ||
+          current.generation.expires_at.toISOString() !== snapshot.expiresAt ||
+          (current.root?.security_root_commitment ?? null) !==
+            snapshot.securityRootCommitment ||
+          current.organization.id.toString() !== snapshot.organizationId ||
+          current.relationship.id.toString() !== snapshot.relationshipId
         ) {
           throw new DomainError(
             "CONFLICT",
-            "The relationship changed. Review the latest details before trying again.",
+            "This relationship changed. Review the latest details before trying again.",
           );
         }
         const revoked = await provisioner.revoke({
@@ -1566,6 +1771,11 @@ export function createApprovedPayeeService(
       transactionHash &&
       !operation.transaction_hashes.includes(transactionHash)
     ) {
+      if (operation.kind !== "ACCEPT")
+        throw new DomainError(
+          "CONFLICT",
+          "We couldn't match that submission to this action.",
+        );
       await persistence.approvedPayees.updateOperation(operation.id, {
         transaction_hashes: [transactionHash],
       });
@@ -1846,6 +2056,11 @@ export function createApprovedPayeeService(
     );
   }
 
+  async function reconcileRelationship(relationshipId: bigint) {
+    await reconcileCurrentRelationship(relationshipId);
+    return detail(relationshipId);
+  }
+
   return {
     list,
     resolve,
@@ -1856,5 +2071,6 @@ export function createApprovedPayeeService(
     prepareAccept,
     authorize,
     reconcile,
+    reconcileRelationship,
   };
 }

@@ -106,7 +106,17 @@ export function paymentExecutionDto(
       ? "PAYMENT_UNCONFIRMED"
       : operation.status === "FAILED"
         ? "PAYMENT_FAILED"
-        : undefined;
+    : undefined;
+  const contextualMessage =
+    code === "SETTLEMENT_UPDATED" && review
+      ? `${review.payeeName} updated where they receive. Review the payment again.`
+      : code === "RELATIONSHIP_INACTIVE" && review
+        ? `Payment blocked — ${review.organizationName} no longer approves ${review.payeeName}.`
+        : code === "REAPPROVAL_REQUIRED"
+          ? "Approval required again — protected identity or relationship authority changed."
+          : code
+            ? paymentProblemMessage(code)
+            : undefined;
   return {
     id: operation.id.toString(),
     status: operation.status,
@@ -119,7 +129,7 @@ export function paymentExecutionDto(
       ? {
           problem: {
             code,
-            message: paymentProblemMessage(code),
+            message: contextualMessage!,
             action: problemAction(code),
           },
         }

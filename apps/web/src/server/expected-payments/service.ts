@@ -57,6 +57,20 @@ const reasonLabels = {
     "We couldn't confirm the payment yet. Check its status before trying again.",
 } as const;
 
+function relationshipProblem(row: ReadRow) {
+  if (row.relationship.status === "REVOKED" || row.relationship.revoked_at)
+    return `Payment blocked — ${row.organizationWorkspace.display_name} no longer approves ${row.payeeWorkspace.display_name}.`;
+  if (
+    row.relationship.status === "EXPIRED" ||
+    (row.relationship.expires_at && row.relationship.expires_at <= new Date()) ||
+    row.generation.expires_at <= new Date()
+  )
+    return "Payment blocked — this approval expired.";
+  if (row.relationship.status === "REAPPROVAL_REQUIRED")
+    return "Approval required again — protected identity or relationship authority changed.";
+  return "This payee relationship changed. Review it before payment.";
+}
+
 const retryablePaymentReasons = new Set([
   "SETTLEMENT_UPDATED",
   "SETTLEMENT_UNAVAILABLE",
@@ -76,13 +90,13 @@ function projectedState(row: ReadRow) {
   ) {
     return {
       status: "ATTENTION" as const,
-      reason: "This payee is no longer approved for payment.",
+      reason: relationshipProblem(row),
     };
   }
   if (row.generation.ended_at || row.generation.expires_at <= new Date()) {
     return {
       status: "ATTENTION" as const,
-      reason: "This payee relationship changed. Review it before payment.",
+      reason: relationshipProblem(row),
     };
   }
   return {
@@ -108,7 +122,10 @@ function rowDto(row: ReadRow, recipient: boolean): ExpectedPaymentRowDto {
     reference: row.expectedPayment.external_reference ?? undefined,
     status: projection.status,
     statusLabel: statusLabels[projection.status],
-    attentionReason: projection.reason,
+    attentionReason:
+      row.expectedPayment.status_reason_code === "SETTLEMENT_UPDATED"
+        ? `${row.payeeWorkspace.display_name} updated where they receive. Review the payment again.`
+        : projection.reason,
     createdAt: row.expectedPayment.created_at.toISOString(),
     receiptAvailable: Boolean(row.receiptId),
   };

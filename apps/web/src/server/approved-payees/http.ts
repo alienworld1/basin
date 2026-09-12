@@ -143,6 +143,12 @@ export async function approvedPayeeHandler(
       );
     }
     const input = reconcileInput.parse(raw);
+    if ("relationshipId" in input) {
+      return noStoreJson(
+        await service.reconcileRelationship(BigInt(input.relationshipId)),
+        202,
+      );
+    }
     const result = await service.reconcile(
       BigInt(input.operationId),
       input.transactionHash as `0x${string}` | undefined,
