@@ -50,9 +50,15 @@ export const expectedPaymentStatuses = [
 ] as const;
 export const expectedPaymentReasonCodes = [
   "RELATIONSHIP_CHANGED",
+  "SETTLEMENT_UPDATED",
+  "SETTLEMENT_UNAVAILABLE",
+  "REAPPROVAL_REQUIRED",
   "RELATIONSHIP_INACTIVE",
   "AUTHORIZATION_UNAVAILABLE",
   "OBLIGATION_UNAVAILABLE",
+  "TREASURY_BLOCKED",
+  "INSUFFICIENT_FUNDS",
+  "PAYMENT_UNCONFIRMED",
   "PAYMENT_FAILED",
 ] as const;
 export const paymentStatuses = [

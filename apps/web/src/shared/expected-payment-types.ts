@@ -1,3 +1,5 @@
+import type { PaymentExecutionDto } from "./payment-types";
+
 export type ExpectedPaymentStatus =
   "EXPECTED" | "READY" | "PROCESSING" | "SATISFIED" | "ATTENTION" | "CANCELLED";
 
@@ -45,6 +47,17 @@ export type ExpectedPaymentDetailDto = ExpectedPaymentRowDto & {
   obligationId?: string;
   paymentId?: string;
   receiptId?: string;
+  relationshipUpdate?: {
+    previousGenerationLabel: string;
+    currentGenerationLabel: string;
+    canAdopt: boolean;
+  };
+  paymentExecution?: PaymentExecutionDto;
+  paymentAction?: {
+    status: "READY" | "PROCESSING" | "ATTENTION" | "SATISFIED";
+    canReview: boolean;
+    message?: string;
+  };
   authorization?: {
     status: "PREPARED" | "AWAITING_APPROVAL" | "SUBMITTED" | "UNKNOWN_EXTERNAL_STATE" | "CONFIRMED" | "FAILED";
     message: string;

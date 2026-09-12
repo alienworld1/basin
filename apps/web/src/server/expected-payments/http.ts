@@ -20,12 +20,17 @@ import {
   expectedPaymentDetailInput,
   expectedPaymentListInput,
   strictExpectedPaymentQuery,
+  paymentPrepareInput,
+  paymentSubmitInput,
+  reconcilePaymentExecutionInput,
+  refreshExpectedPaymentRelationshipInput,
 } from "./input";
 import { createExpectedPaymentService } from "./service";
 import { createExpectedPaymentAuthorizationService } from "./authorization";
+import { createPaymentService } from "../payments/service";
 
 export type ExpectedPaymentHandlerKind =
-  "list" | "detail" | "create" | "cancel" | "authorizePrepare" | "authorize" | "authorizeReconcile";
+  "list" | "detail" | "create" | "cancel" | "refreshRelationship" | "authorizePrepare" | "authorize" | "authorizeReconcile" | "paymentPrepare" | "paymentSubmit" | "paymentReconcile";
 
 export async function expectedPaymentHandler(
   request: Request,
@@ -52,7 +57,7 @@ export async function expectedPaymentHandler(
             }
           : {
               ...(await request.json()),
-              ...(["cancel", "authorizePrepare", "authorize", "authorizeReconcile"].includes(kind) ? { expectedPaymentId } : {}),
+              ...(["cancel", "refreshRelationship", "authorizePrepare", "authorize", "authorizeReconcile", "paymentPrepare", "paymentSubmit", "paymentReconcile"].includes(kind) ? { expectedPaymentId } : {}),
             };
     if (!["list", "detail"].includes(kind)) requireSameOrigin(request);
     const workspaceId = decimalId.parse(
@@ -64,11 +69,24 @@ export async function expectedPaymentHandler(
     if (
       !["list", "detail"].includes(kind) &&
       (access.workspace.type !== "ORGANIZATION" ||
-        access.memberRole !== "ADMIN")
+        access.memberRole !== "ADMIN" && !["paymentPrepare", "paymentSubmit", "paymentReconcile"].includes(kind))
     ) {
       throw new AuthError("FORBIDDEN", "You don't have permission to do that.");
     }
     const service = createExpectedPaymentService(persistence, access, user.id);
+    if (["paymentPrepare", "paymentSubmit", "paymentReconcile"].includes(kind)) {
+      const payments = createPaymentService(persistence, access);
+      if (kind === "paymentReconcile") {
+        const input = reconcilePaymentExecutionInput.extend({ expectedPaymentId: decimalId }).parse(raw);
+        return noStoreJson(await payments.reconcile(BigInt(input.expectedPaymentId)), 202);
+      }
+      if (kind === "paymentPrepare") {
+        const input = paymentPrepareInput.extend({ expectedPaymentId: decimalId }).parse(raw);
+        return noStoreJson(await payments.prepare(BigInt(input.expectedPaymentId), input.idempotencyKey), 202);
+      }
+      const input = paymentSubmitInput.extend({ expectedPaymentId: decimalId }).parse(raw);
+      return noStoreJson(await payments.submit(BigInt(input.expectedPaymentId), BigInt(input.operationId)), 202);
+    }
     if (kind === "list") {
       const input = expectedPaymentListInput.parse(raw);
       return noStoreJson(
@@ -92,6 +110,17 @@ export async function expectedPaymentHandler(
         idempotencyKey: input.idempotencyKey,
       });
       return noStoreJson(result, result.created ? 201 : 200);
+    }
+    if (kind === "refreshRelationship") {
+      const input = refreshExpectedPaymentRelationshipInput
+        .extend({ expectedPaymentId: decimalId })
+        .parse(raw);
+      return noStoreJson(
+        await service.refreshRelationship(
+          BigInt(input.expectedPaymentId),
+          input.idempotencyKey,
+        ),
+      );
     }
     if (kind === "authorizePrepare" || kind === "authorize") {
       const input = authorizeExpectedPaymentInput.extend({ expectedPaymentId: decimalId }).parse(raw);

@@ -32,6 +32,11 @@ export const cancelExpectedPaymentInput = z.strictObject({
   idempotencyKey,
 });
 
+export const refreshExpectedPaymentRelationshipInput = z.strictObject({
+  workspaceId: decimalId,
+  idempotencyKey,
+});
+
 export const authorizeExpectedPaymentInput = z.strictObject({
   workspaceId: decimalId,
   idempotencyKey,
@@ -42,6 +47,9 @@ export const authorizeExpectedPaymentInput = z.strictObject({
 export const reconcileExpectedPaymentAuthorizationInput = z.strictObject({
   workspaceId: decimalId,
 });
+export const paymentPrepareInput = z.strictObject({ workspaceId: decimalId, idempotencyKey });
+export const paymentSubmitInput = z.strictObject({ workspaceId: decimalId, operationId: decimalId });
+export const reconcilePaymentExecutionInput = z.strictObject({ workspaceId: decimalId });
 
 export function strictExpectedPaymentQuery(
   url: URL,

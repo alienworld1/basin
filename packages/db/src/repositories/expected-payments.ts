@@ -13,6 +13,7 @@ import { expectedPaymentInput } from "../inputs";
 import {
   ApprovedPayee,
   ApprovedPayeeGeneration,
+  ApprovedSecurityRoot,
   BasinIdentity,
   ExpectedPayment,
   ExpectedPaymentOperation,
@@ -367,6 +368,163 @@ export function expectedPaymentRepository(db: Database) {
       );
     },
 
+    refreshRelationship(values: {
+      organization_id: bigint;
+      expected_payment_id: bigint;
+      member_id: bigint;
+      idempotency_key: string;
+    }) {
+      return safely(() =>
+        db.transaction(async (tx) => {
+          recordId.parse(values.organization_id);
+          recordId.parse(values.expected_payment_id);
+          recordId.parse(values.member_id);
+          const requestHash = operationHash([
+            values.organization_id.toString(),
+            values.expected_payment_id.toString(),
+            "REFRESH_RELATIONSHIP",
+          ]);
+          await tx
+            .insert(ExpectedPaymentOperation)
+            .values({
+              organization_id: values.organization_id,
+              action: "REFRESH_RELATIONSHIP",
+              idempotency_key: values.idempotency_key,
+              request_hash: requestHash,
+            })
+            .onConflictDoNothing();
+          const operation = found(
+            (
+              await tx
+                .select()
+                .from(ExpectedPaymentOperation)
+                .where(
+                  and(
+                    eq(
+                      ExpectedPaymentOperation.organization_id,
+                      values.organization_id,
+                    ),
+                    eq(
+                      ExpectedPaymentOperation.action,
+                      "REFRESH_RELATIONSHIP",
+                    ),
+                    eq(
+                      ExpectedPaymentOperation.idempotency_key,
+                      values.idempotency_key,
+                    ),
+                  ),
+                )
+                .for("update")
+            )[0],
+          );
+          if (operation.request_hash !== requestHash)
+            throw new DomainError(
+              "CONFLICT",
+              "This request was already used for another payment.",
+            );
+          if (operation.expected_payment_id)
+            return lockExpectedPayment(
+              tx,
+              values.organization_id,
+              operation.expected_payment_id,
+            );
+          found(
+            (
+              await tx
+                .select()
+                .from(OrganizationMember)
+                .where(
+                  and(
+                    eq(OrganizationMember.id, values.member_id),
+                    eq(
+                      OrganizationMember.organization_id,
+                      values.organization_id,
+                    ),
+                    eq(OrganizationMember.role, "ADMIN"),
+                    eq(OrganizationMember.status, "ACTIVE"),
+                  ),
+                )
+                .for("update")
+            )[0],
+          );
+          const current = await lockExpectedPayment(
+            tx,
+            values.organization_id,
+            values.expected_payment_id,
+          );
+          requireMatch(
+            ["EXPECTED", "ATTENTION"].includes(current.status) &&
+              !current.obligation_record_id &&
+              !current.payment_record_id,
+          );
+          const relationship = found(
+            (
+              await tx
+                .select()
+                .from(ApprovedPayee)
+                .where(
+                  and(
+                    eq(ApprovedPayee.id, current.approved_payee_id),
+                    eq(
+                      ApprovedPayee.organization_id,
+                      values.organization_id,
+                    ),
+                    eq(ApprovedPayee.status, "ACTIVE"),
+                    isNull(ApprovedPayee.revoked_at),
+                  ),
+                )
+                .for("update")
+            )[0],
+          );
+          const generation = found(
+            (
+              await tx
+                .select({ generation: ApprovedPayeeGeneration })
+                .from(ApprovedPayeeGeneration)
+                .innerJoin(
+                  ApprovedSecurityRoot,
+                  eq(
+                    ApprovedSecurityRoot.approved_payee_generation_id,
+                    ApprovedPayeeGeneration.id,
+                  ),
+                )
+                .where(
+                  and(
+                    eq(
+                      ApprovedPayeeGeneration.approved_payee_id,
+                      relationship.id,
+                    ),
+                    isNull(ApprovedPayeeGeneration.ended_at),
+                  ),
+                )
+                .for("update")
+            )[0],
+          ).generation;
+          requireMatch(generation.expires_at > new Date());
+          const now = new Date();
+          const updated = found(
+            (
+              await tx
+                .update(ExpectedPayment)
+                .set({
+                  approved_payee_generation_id: generation.id,
+                  status: "EXPECTED",
+                  status_reason_code: null,
+                  updated_at: now,
+                })
+                .where(eq(ExpectedPayment.id, current.id))
+                .returning()
+            )[0],
+          );
+          await tx
+            .update(ExpectedPaymentOperation)
+            .set({ expected_payment_id: updated.id, completed_at: now })
+            .where(eq(ExpectedPaymentOperation.id, operation.id));
+          return updated;
+        }),
+      );
+    },
+
     listForOrganization(organizationId: bigint, cursor?: bigint, limit = 25) {
       return safely(async () => {
         recordId.parse(organizationId);
@@ -615,6 +773,11 @@ export function expectedPaymentRepository(db: Database) {
               payment.purpose === current.purpose &&
               payment.external_reference === current.external_reference,
           );
+          if (
+            current.status === "PROCESSING" &&
+            current.payment_record_id === payment.id
+          )
+            return current;
           assertExpectedPaymentTransition(current.status, "PROCESSING");
           return found(
             (
@@ -652,7 +815,8 @@ export function expectedPaymentRepository(db: Database) {
           ) {
             return current;
           }
-          assertExpectedPaymentTransition(current.status, "ATTENTION");
+          if (current.status !== "ATTENTION")
+            assertExpectedPaymentTransition(current.status, "ATTENTION");
           return found(
             (
               await tx
@@ -660,6 +824,37 @@ export function expectedPaymentRepository(db: Database) {
                 .set({
                   status: "ATTENTION",
                   status_reason_code: values.reason,
+                  updated_at: new Date(),
+                })
+                .where(eq(ExpectedPayment.id, current.id))
+                .returning()
+            )[0],
+          );
+        }),
+      );
+    },
+
+    projectReady(organizationId: bigint, expectedPaymentId: bigint) {
+      return safely(() =>
+        db.transaction(async (tx) => {
+          const current = await lockExpectedPayment(
+            tx,
+            organizationId,
+            expectedPaymentId,
+          );
+          if (current.status === "READY" && !current.status_reason_code)
+            return current;
+          requireMatch(
+            current.obligation_record_id && !current.payment_record_id,
+          );
+          assertExpectedPaymentTransition(current.status, "READY");
+          return found(
+            (
+              await tx
+                .update(ExpectedPayment)
+                .set({
+                  status: "READY",
+                  status_reason_code: null,
                   updated_at: new Date(),
                 })
                 .where(eq(ExpectedPayment.id, current.id))
@@ -698,6 +893,7 @@ export function expectedPaymentRepository(db: Database) {
                 current.amount_base_units &&
               evidence.receipt.asset_address === current.asset_address,
           );
+          if (current.status === "SATISFIED") return current;
           assertExpectedPaymentTransition(current.status, "SATISFIED");
           return found(
             (

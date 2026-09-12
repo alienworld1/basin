@@ -11,7 +11,9 @@ export const ExpectedPaymentOperation = basin.table(
     organization_id: reference()
       .references(() => Organization.id, { onDelete: "restrict" })
       .notNull(),
-    action: text().$type<"CREATE" | "CANCEL">().notNull(),
+    action: text()
+      .$type<"CREATE" | "CANCEL" | "REFRESH_RELATIONSHIP">()
+      .notNull(),
     idempotency_key: text().notNull(),
     request_hash: text().notNull(),
     expected_payment_id: reference().references(() => ExpectedPayment.id, {
@@ -25,7 +27,7 @@ export const ExpectedPaymentOperation = basin.table(
     index().on(t.expected_payment_id),
     check(
       "expected_payment_operation_action",
-      sql`${t.action} in ('CREATE', 'CANCEL')`,
+      sql`${t.action} in ('CREATE', 'CANCEL', 'REFRESH_RELATIONSHIP')`,
     ),
     check(
       "expected_payment_operation_key_length",

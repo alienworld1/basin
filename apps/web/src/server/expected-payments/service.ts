@@ -15,6 +15,7 @@ import type {
   ExpectedPaymentRowDto,
 } from "../../shared/expected-payment-types";
 import { createApprovedPayeeService } from "../approved-payees/service";
+import { paymentExecutionDto } from "../payments/service";
 import { expectedPaymentAssetConfiguration } from "./config";
 
 type Persistence = ReturnType<typeof createPersistence>;
@@ -42,7 +43,27 @@ const reasonLabels = {
     "We couldn't verify this payee relationship right now.",
   OBLIGATION_UNAVAILABLE: "Payment authorization needs to be reviewed.",
   PAYMENT_FAILED: "The payment needs attention before it can continue.",
+  SETTLEMENT_UPDATED:
+    "The payee updated their receiving details. Review the latest payment.",
+  SETTLEMENT_UNAVAILABLE:
+    "The payee's latest receiving details still need to sync.",
+  REAPPROVAL_REQUIRED:
+    "This payee's security authority changed. An administrator needs to review the approval.",
+  TREASURY_BLOCKED:
+    "Your organization's payment controls need an administrator's attention.",
+  INSUFFICIENT_FUNDS:
+    "Your organization doesn't have enough available USDC for this payment.",
+  PAYMENT_UNCONFIRMED:
+    "We couldn't confirm the payment yet. Check its status before trying again.",
 } as const;
+
+const retryablePaymentReasons = new Set([
+  "SETTLEMENT_UPDATED",
+  "SETTLEMENT_UNAVAILABLE",
+  "AUTHORIZATION_UNAVAILABLE",
+  "TREASURY_BLOCKED",
+  "INSUFFICIENT_FUNDS",
+]);
 
 function projectedState(row: ReadRow) {
   if (row.expectedPayment.status === "CANCELLED") {
@@ -120,17 +141,57 @@ function detailDto(row: ReadRow, access: Access): ExpectedPaymentDetailDto {
     obligationId: row.expectedPayment.obligation_record_id?.toString(),
     paymentId: row.expectedPayment.payment_record_id?.toString(),
     receiptId: row.receiptId?.toString(),
+    paymentAction: !recipient
+      ? {
+          status:
+            base.status === "READY" ||
+            base.status === "PROCESSING" ||
+            base.status === "ATTENTION" ||
+            base.status === "SATISFIED"
+              ? base.status
+              : "ATTENTION",
+          canReview:
+            access.memberRole === "PAYMENT_OPERATOR" &&
+            (base.status === "READY" ||
+              (base.status === "ATTENTION" &&
+                Boolean(
+                  row.expectedPayment.status_reason_code &&
+                  retryablePaymentReasons.has(
+                    row.expectedPayment.status_reason_code,
+                  ),
+                ))),
+          ...(access.memberRole === "ADMIN" && base.status === "READY"
+            ? { message: "A payment operator can complete this payment." }
+            : {}),
+          ...(base.status === "PROCESSING"
+            ? {
+                message:
+                  "This payment is being confirmed. Check its status for the latest result.",
+              }
+            : base.status === "ATTENTION"
+              ? {
+                  message:
+                    base.attentionReason ??
+                    "This payment needs attention before it can continue.",
+                }
+              : {}),
+        }
+      : undefined,
   };
 }
 
-function authorizationMessage(status: NonNullable<ExpectedPaymentDetailDto["authorization"]>["status"]) {
+function authorizationMessage(
+  status: NonNullable<ExpectedPaymentDetailDto["authorization"]>["status"],
+) {
   return {
     PREPARED: "Payment authorization is ready to submit.",
     AWAITING_APPROVAL: "Waiting for organization wallet approval.",
     SUBMITTED: "Payment authorization is being confirmed.",
-    UNKNOWN_EXTERNAL_STATE: "We couldn't confirm the authorization yet. Check its status.",
+    UNKNOWN_EXTERNAL_STATE:
+      "We couldn't confirm the authorization yet. Check its status.",
     CONFIRMED: "Payment authorization is confirmed.",
-    FAILED: "Payment authorization failed. Create a new expected payment before trying again.",
+    FAILED:
+      "Payment authorization failed. Create a new expected payment before trying again.",
   }[status];
 }
 
@@ -196,6 +257,10 @@ export function createExpectedPaymentService(
   }
 
   async function detail(id: bigint): Promise<ExpectedPaymentDetailDto> {
+    const executionPromise =
+      access.workspace.type === "ORGANIZATION" && organizationId
+        ? persistence.paymentExecutions.readMaybe(organizationId, id)
+        : Promise.resolve(null);
     let row: ReadRow;
     try {
       row =
@@ -215,46 +280,54 @@ export function createExpectedPaymentService(
       );
     }
     const result = detailDto(row, access);
-    if (["CANCELLED", "SATISFIED"].includes(result.status)) return result;
-    try {
-      const relationship = await createApprovedPayeeService(
-        persistence,
-        access,
-        actorUserId,
-      ).detail(row.relationship.id);
-      if (
-        relationship.verification === "changed" ||
-        relationship.technical?.generationId !==
-          row.expectedPayment.approved_payee_generation_id.toString()
-      ) {
-        return {
+    const currentRelationship =
+      row.generation.ended_at &&
+      access.workspace.type === "ORGANIZATION" &&
+      organizationId
+        ? (
+            await persistence.expectedPayments.eligibleRelationships(
+              organizationId,
+            )
+          ).find((item) => item.relationship.id === row.relationship.id)
+        : undefined;
+    const relationshipUpdate =
+      currentRelationship && currentRelationship.generation.id !== row.generation.id
+        ? {
+            previousGenerationLabel: `Generation ${row.generation.generation_number}`,
+            currentGenerationLabel: `Generation ${currentRelationship.generation.generation_number}`,
+            canAdopt:
+              access.memberRole === "ADMIN" &&
+              row.expectedPayment.status === "EXPECTED" &&
+              !row.expectedPayment.obligation_record_id &&
+              !row.expectedPayment.payment_record_id,
+          }
+        : undefined;
+    const withRelationship = relationshipUpdate
+      ? {
           ...result,
-          status: "ATTENTION",
-          statusLabel: "Needs attention",
-          attentionReason:
-            "This payee relationship changed. Review it before payment.",
           canAuthorize: false,
-        };
-      }
-      if (!relationship.eligible) {
-        return {
-          ...result,
-          status: "ATTENTION",
-          statusLabel: "Needs attention",
-          attentionReason: "This payee is no longer approved for payment.",
-          canAuthorize: false,
-        };
-      }
-    } catch {
-      return {
-        ...result,
-        status: "ATTENTION",
-        statusLabel: "Needs attention",
-        attentionReason:
-          "We couldn't verify this payee relationship right now.",
-        canAuthorize: false,
-      };
-    }
+          relationshipUpdate,
+          paymentAction: result.paymentAction
+            ? { status: result.paymentAction.status, canReview: false }
+            : undefined,
+        }
+      : result;
+    const execution = await executionPromise;
+    const withExecution = execution
+      ? {
+          ...withRelationship,
+          paymentExecution: paymentExecutionDto(
+            execution,
+            row.receiptId?.toString(),
+          ),
+          paymentAction: result.paymentAction
+            ? { ...result.paymentAction, canReview: false }
+            : undefined,
+        }
+      : withRelationship;
+    if (["CANCELLED", "SATISFIED", "PROCESSING"].includes(result.status))
+      return withExecution;
+    if (execution) return withExecution;
     let authorization: ExpectedPaymentDetailDto["authorization"];
     if (access.workspace.type === "ORGANIZATION" && organizationId) {
       try {
@@ -271,11 +344,12 @@ export function createExpectedPaymentService(
       }
     }
     return {
-      ...result,
+      ...withExecution,
       authorization,
       canAuthorize:
-        result.canAuthorize &&
-        (!authorization || ["PREPARED", "FAILED"].includes(authorization.status)),
+        withExecution.canAuthorize &&
+        (!authorization ||
+          ["PREPARED", "FAILED"].includes(authorization.status)),
     };
   }
 
@@ -383,5 +457,25 @@ export function createExpectedPaymentService(
     return detail(id);
   }
 
-  return { list, detail, create, cancel };
+  async function refreshRelationship(id: bigint, idempotencyKey: string) {
+    if (
+      access.workspace.type !== "ORGANIZATION" ||
+      access.memberRole !== "ADMIN" ||
+      !organizationId ||
+      !access.memberId
+    )
+      throw new DomainError(
+        "INVALID_INPUT",
+        "An organization administrator can review this relationship update.",
+      );
+    await persistence.expectedPayments.refreshRelationship({
+      organization_id: organizationId,
+      expected_payment_id: id,
+      member_id: access.memberId,
+      idempotency_key: idempotencyKey,
+    });
+    return detail(id);
+  }
+
+  return { list, detail, create, cancel, refreshRelationship };
 }

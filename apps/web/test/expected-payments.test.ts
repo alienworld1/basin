@@ -12,7 +12,10 @@ import { createExpectedPaymentService } from "../src/server/expected-payments/se
 import {
   createExpectedPaymentInput,
   expectedPaymentListInput,
+  paymentPrepareInput,
+  paymentSubmitInput,
 } from "../src/server/expected-payments/input";
+import { paymentProblemMessage } from "../src/server/payments/preflight";
 
 const key = "91a58b23-33ae-4426-a57e-2c098fe30e91";
 
@@ -86,6 +89,55 @@ test("list pagination is bounded", () => {
   );
 });
 
+test("payment execution requests accept locators but reject authority overrides", () => {
+  assert.deepEqual(
+    paymentPrepareInput.parse({ workspaceId: "2", idempotencyKey: key }),
+    { workspaceId: "2", idempotencyKey: key },
+  );
+  assert.deepEqual(
+    paymentSubmitInput.parse({ workspaceId: "2", operationId: "9" }),
+    { workspaceId: "2", operationId: "9" },
+  );
+  for (const field of [
+    "destination",
+    "amount",
+    "asset",
+    "router",
+    "calldata",
+    "generationId",
+    "settlementEpoch",
+    "role",
+  ]) {
+    assert.throws(() =>
+      paymentSubmitInput.parse({
+        workspaceId: "2",
+        operationId: "9",
+        [field]: "unsupported",
+      }),
+    );
+  }
+});
+
+test("payment authority failures preserve the split-authority distinction", () => {
+  assert.match(
+    paymentProblemMessage("SETTLEMENT_UPDATED"),
+    /updated their receiving details/i,
+  );
+  assert.match(
+    paymentProblemMessage("REAPPROVAL_REQUIRED"),
+    /security authority changed/i,
+  );
+  assert.notEqual(
+    paymentProblemMessage("SETTLEMENT_UPDATED"),
+    paymentProblemMessage("REAPPROVAL_REQUIRED"),
+  );
+  assert.match(
+    paymentProblemMessage("RELATIONSHIP_INACTIVE"),
+    /no longer approved/i,
+  );
+  assert.match(paymentProblemMessage("PAYMENT_FAILED"), /no funds moved/i);
+});
+
 test("expected-payment lifecycle reserves evidence-backed states", () => {
   assert.doesNotThrow(() =>
     assertExpectedPaymentTransition("EXPECTED", "READY"),
@@ -98,7 +150,15 @@ test("expected-payment lifecycle reserves evidence-backed states", () => {
 });
 
 test("every expected-payment handler authenticates before data access", async () => {
-  for (const kind of ["list", "detail", "create", "cancel"] as const) {
+  for (const kind of [
+    "list",
+    "detail",
+    "create",
+    "cancel",
+    "paymentPrepare",
+    "paymentSubmit",
+    "paymentReconcile",
+  ] as const) {
     const response = await expectedPaymentHandler(
       new Request("https://basin.test/api/expected-payments?workspaceId=1", {
         method: kind === "list" || kind === "detail" ? "GET" : "POST",
