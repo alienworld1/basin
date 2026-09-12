@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { createPersistence } from "@basin/db";
 import type { Organization, OrganizationTreasury } from "@basin/db/schema";
 import { address } from "@basin/domain";
+import { encodeFunctionData, maxUint256 } from "viem";
 import type { TreasuryStatusResponse } from "../../shared/treasury-types";
 import {
   createPrivyTreasuryAdapter,
@@ -22,8 +23,26 @@ import {
   observedPolicyFingerprint,
   policyFingerprint,
 } from "./policy";
-import { readTreasuryBalance, type TreasuryBalance } from "./balance";
+import {
+  confirmTreasuryAllowance,
+  readTreasuryBalance,
+  type TreasuryBalance,
+} from "./balance";
 import { verifiedBasinRouter } from "../config/verified-basin-router";
+import { basinRouterManifest } from "../config/basin-router-manifest";
+
+const erc20ApproveAbi = [
+  {
+    type: "function",
+    name: "approve",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+] as const;
 
 type Persistence = ReturnType<typeof createPersistence>;
 type Access = Awaited<
@@ -64,7 +83,14 @@ function response(
   operation: Awaited<ReturnType<Persistence["treasury"]["latestOperation"]>>,
   balance?: TreasuryBalance,
 ): TreasuryStatusResponse {
-  const status = treasury?.status ?? "NOT_STARTED";
+  const persistedStatus = treasury?.status ?? "NOT_STARTED";
+  const minimumAllowance = configuredRoutineLimit();
+  const allowanceRequired =
+    persistedStatus === "READY" &&
+    minimumAllowance !== undefined &&
+    balance?.routerAllowanceBaseUnits !== undefined &&
+    BigInt(balance.routerAllowanceBaseUnits) < BigInt(minimumAllowance);
+  const status = allowanceRequired ? "CONTROL_READY" : persistedStatus;
   return {
     summary: {
       workspaceId: access.workspace.id.toString(),
@@ -94,6 +120,15 @@ function response(
               ...(balance
                 ? {
                     ethBalanceWei: balance.ethBalanceWei,
+                    ...(balance.usdcBalanceBaseUnits
+                      ? { usdcBalanceBaseUnits: balance.usdcBalanceBaseUnits }
+                      : {}),
+                    ...(balance.routerAllowanceBaseUnits
+                      ? {
+                          routerAllowanceBaseUnits:
+                            balance.routerAllowanceBaseUnits,
+                        }
+                      : {}),
                     balanceCheckedAt: balance.checkedAt.toISOString(),
                   }
                 : {}),
@@ -173,7 +208,15 @@ export function createTreasuryService(
       persistence.treasury.latestOperation(organizationId),
     ]);
     const balance = context.treasury?.wallet_address
-      ? await readTreasuryBalance(context.treasury.wallet_address)
+      ? await readTreasuryBalance(
+          context.treasury.wallet_address,
+          basinRouterManifest
+            ? {
+                assetAddress: basinRouterManifest.assetAddress,
+                routerAddress: basinRouterManifest.address,
+              }
+            : undefined,
+        )
       : undefined;
     return response(
       access,
@@ -235,13 +278,13 @@ export function createTreasuryService(
       }
       const policyAwaitingAttachment = Boolean(
         treasury.routine_policy_id &&
-          wallet.chainType === "ethereum" &&
-          wallet.ownerId === owner.id &&
-          wallet.entityId === context.organization.privy_organization_id &&
-          wallet.policyIds.length === 0 &&
-          wallet.additionalSigners.length === 1 &&
-          wallet.additionalSigners[0].signerId === signer.id &&
-          wallet.additionalSigners[0].policyIds.length === 0,
+        wallet.chainType === "ethereum" &&
+        wallet.ownerId === owner.id &&
+        wallet.entityId === context.organization.privy_organization_id &&
+        wallet.policyIds.length === 0 &&
+        wallet.additionalSigners.length === 1 &&
+        wallet.additionalSigners[0].signerId === signer.id &&
+        wallet.additionalSigners[0].policyIds.length === 0,
       );
       if (policyAwaitingAttachment) {
         await persistence.treasury.saveTreasury({
@@ -288,19 +331,24 @@ export function createTreasuryService(
     return state();
   }
 
-  async function setup(input: string | {
-    idempotencyKey: string;
-    authorizationSignature?: string;
-    requestExpiry?: number;
-  }) {
-    const request = typeof input === "string"
-      ? { idempotencyKey: input }
-      : input;
+  async function setup(
+    input:
+      | string
+      | {
+          idempotencyKey: string;
+          authorizationSignature?: string;
+          requestExpiry?: number;
+        },
+  ) {
+    const request =
+      typeof input === "string" ? { idempotencyKey: input } : input;
     const config = treasuryConfiguration();
     const requestFingerprint = digest({
       organizationId: organizationId.toString(),
       chainId: config.chainId,
       router: config.router,
+      asset: basinRouterManifest?.assetAddress,
+      allowanceVersion: 1,
     });
     const operation = await persistence.treasury.operation(
       organizationId,
@@ -309,22 +357,42 @@ export function createTreasuryService(
       requestFingerprint,
     );
     const context = await persistence.treasury.byWorkspace(access.workspace.id);
+    const allowance =
+      context.treasury?.wallet_address && basinRouterManifest
+        ? await readTreasuryBalance(context.treasury.wallet_address, {
+            assetAddress: basinRouterManifest.assetAddress,
+            routerAddress: basinRouterManifest.address,
+          })
+        : undefined;
+    const needsRouterAllowance = Boolean(
+      !providedAdapter &&
+      config.router &&
+      allowance?.routerAllowanceBaseUnits !== undefined &&
+      BigInt(allowance.routerAllowanceBaseUnits) < BigInt(config.router.limit),
+    );
     const needsRouterPolicyUpgrade = Boolean(
       config.router &&
-        (!context.treasury?.routine_policy_id ||
-          !context.treasury.routine_policy_fingerprint ||
-          !context.treasury.router_address ||
-          !context.treasury.router_version ||
-          !context.treasury.routine_per_tx_limit_base_units),
+      (!context.treasury?.routine_policy_id ||
+        !context.treasury.routine_policy_fingerprint ||
+        !context.treasury.router_address ||
+        !context.treasury.router_version ||
+        !context.treasury.routine_per_tx_limit_base_units),
     );
 
     // Organizations set up before Router controls were introduced have a
     // completed provisioning operation but lack the bounded routine policy.
     // Treat that record as resumable: its wallet, owner quorum, and signer are
     // reused, and only the missing Router-policy work is performed.
-    if (operation.status === "COMPLETED" && !needsRouterPolicyUpgrade)
+    if (
+      operation.status === "COMPLETED" &&
+      !needsRouterPolicyUpgrade &&
+      !needsRouterAllowance
+    )
       return reconcile();
-    if (operation.status === "COMPLETED" && needsRouterPolicyUpgrade) {
+    if (
+      operation.status === "COMPLETED" &&
+      (needsRouterPolicyUpgrade || needsRouterAllowance)
+    ) {
       await persistence.treasury.updateOperation(operation.id, {
         step: "ROUTINE_SIGNER_VERIFIED",
         status: "IN_PROGRESS",
@@ -554,6 +622,35 @@ export function createTreasuryService(
         signerId,
         routinePolicyId,
       );
+      if (needsRouterAllowance && config.router && basinRouterManifest) {
+        if (!adapter().sendHighAuthorityTransaction)
+          throw new TreasuryProviderError("CONFIGURATION_MISMATCH");
+        const token = {
+          assetAddress: basinRouterManifest.assetAddress,
+          routerAddress: config.router.address,
+        };
+        const approval = await adapter().sendHighAuthorityTransaction!({
+          walletId,
+          to: basinRouterManifest.assetAddress,
+          data: encodeFunctionData({
+            abi: erc20ApproveAbi,
+            functionName: "approve",
+            args: [config.router.address, maxUint256],
+          }),
+          idempotencyKey: `${providerKey}-router-allowance`,
+          authorizationSignature: request.authorizationSignature,
+          requestExpiry: request.requestExpiry,
+        });
+        if (
+          !(await confirmTreasuryAllowance(
+            approval.hash,
+            walletAddress,
+            token,
+            config.router.limit,
+          ))
+        )
+          throw new TreasuryProviderError("UNKNOWN_EXTERNAL_STATE");
+      }
       await persistence.treasury.saveTreasury({
         organization_id: organizationId,
         status: expectedPolicyFingerprint ? "READY" : "CONTROL_READY",

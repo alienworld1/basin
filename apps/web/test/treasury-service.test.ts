@@ -9,8 +9,16 @@ import type {
 } from "@basin/db/schema";
 import type { PrivyTreasuryAdapter } from "../src/server/treasury/adapter";
 import { createTreasuryService } from "../src/server/treasury/service";
-import { generateRoutineKey, unsealRoutineKey } from "../src/server/treasury/protection";
-import { buildRoutinePolicy, observedPolicyFingerprint, policyFingerprint } from "../src/server/treasury/policy";
+import {
+  encodeRoutineAuthorizationKey,
+  generateRoutineKey,
+  unsealRoutineKey,
+} from "../src/server/treasury/protection";
+import {
+  buildRoutinePolicy,
+  observedPolicyFingerprint,
+  policyFingerprint,
+} from "../src/server/treasury/policy";
 
 type Persistence = ReturnType<typeof createPersistence>;
 const now = new Date();
@@ -40,63 +48,112 @@ function harness() {
   let secret: RoutineSignerSecret | null = null;
   let operation: PrivyProvisioningOperation | null = null;
   const calls = { owner: 0, organization: 0, signer: 0, wallet: 0 };
-  const quorums = new Map<string, { id: string; threshold: number; userIds: string[]; publicKeys: string[] }>();
-  let wallet: Awaited<ReturnType<PrivyTreasuryAdapter["getWallet"]>> | undefined;
-  let policyDefinition: Parameters<PrivyTreasuryAdapter["createPolicy"]>[0]["definition"] | undefined;
+  const quorums = new Map<
+    string,
+    { id: string; threshold: number; userIds: string[]; publicKeys: string[] }
+  >();
+  let wallet:
+    Awaited<ReturnType<PrivyTreasuryAdapter["getWallet"]>> | undefined;
+  let policyDefinition:
+    | Parameters<PrivyTreasuryAdapter["createPolicy"]>[0]["definition"]
+    | undefined;
   const adapter: PrivyTreasuryAdapter = {
     async createOwnerQuorum({ userId }) {
       calls.owner++;
-      const value = { id: "quorum-owner", threshold: 1, userIds: [userId], publicKeys: [] };
+      const value = {
+        id: "quorum-owner",
+        threshold: 1,
+        userIds: [userId],
+        publicKeys: [],
+      };
       quorums.set(value.id, value);
       return value;
     },
-    async getQuorum(id) { return quorums.get(id)!; },
+    async getQuorum(id) {
+      return quorums.get(id)!;
+    },
     async createOrganization({ quorumId }) {
       calls.organization++;
       return { id: "org-privy", defaultQuorumId: quorumId };
     },
-    async getOrganization() { return { id: "org-privy", defaultQuorumId: "quorum-owner" }; },
+    async getOrganization() {
+      return { id: "org-privy", defaultQuorumId: "quorum-owner" };
+    },
     async createRoutineSigner({ publicKey }) {
       calls.signer++;
-      const value = { id: "quorum-routine", threshold: 1, userIds: [], publicKeys: [publicKey] };
+      const value = {
+        id: "quorum-routine",
+        threshold: 1,
+        userIds: [],
+        publicKeys: [publicKey],
+      };
       quorums.set(value.id, value);
       return value;
     },
     async createPolicy({ definition }) {
       policyDefinition = definition;
-      return { id: "policy-routine", ownerId: definition.owner_id, fingerprint: "" };
+      return {
+        id: "policy-routine",
+        ownerId: definition.owner_id,
+        fingerprint: "",
+      };
     },
     async getPolicy(_id, expectedFingerprint) {
-      return { id: "policy-routine", ownerId: "quorum-owner", fingerprint: expectedFingerprint(policyDefinition as never) };
+      return {
+        id: "policy-routine",
+        ownerId: "quorum-owner",
+        fingerprint: expectedFingerprint(policyDefinition as never),
+      };
     },
-    async createWallet({ organizationId, ownerId, routineSignerId, routinePolicyId }) {
+    async createWallet({
+      organizationId,
+      ownerId,
+      routineSignerId,
+      routinePolicyId,
+    }) {
       calls.wallet++;
       wallet = {
         id: "wallet-privy",
         address: "0x1111111111111111111111111111111111111111",
         chainType: "ethereum",
         ownerId,
-        additionalSigners: [{ signerId: routineSignerId, policyIds: routinePolicyId ? [routinePolicyId] : [] }],
+        additionalSigners: [
+          {
+            signerId: routineSignerId,
+            policyIds: routinePolicyId ? [routinePolicyId] : [],
+          },
+        ],
         policyIds: [],
         entityId: organizationId,
       };
       return wallet;
     },
-    async getWallet() { return wallet!; },
+    async getWallet() {
+      return wallet!;
+    },
     async attachRoutinePolicy({ routinePolicyId, routineSignerId }) {
       wallet = {
         ...wallet!,
-        additionalSigners: [{ signerId: routineSignerId, policyIds: [routinePolicyId] }],
+        additionalSigners: [
+          { signerId: routineSignerId, policyIds: [routinePolicyId] },
+        ],
       };
       return wallet!;
     },
-    async getIntent() { throw new Error("not configured"); },
+    async getIntent() {
+      throw new Error("not configured");
+    },
   };
   const repository = {
     byWorkspace: async () => ({ organization, treasury }),
     latestOperation: async () => operation,
     adminPrivyUserIds: async () => ["did:privy:admin"],
-    operation: async (_organizationId: bigint, operationType: string, key: string, requestFingerprint: string) => {
+    operation: async (
+      _organizationId: bigint,
+      operationType: string,
+      key: string,
+      requestFingerprint: string,
+    ) => {
       operation ??= {
         id: 1n,
         organization_id: 8n,
@@ -113,7 +170,9 @@ function harness() {
       } as PrivyProvisioningOperation;
       return operation;
     },
-    saveTreasury: async (values: Partial<OrganizationTreasury> & { organization_id: bigint }) => {
+    saveTreasury: async (
+      values: Partial<OrganizationTreasury> & { organization_id: bigint },
+    ) => {
       treasury = {
         id: 2n,
         status: "NOT_STARTED",
@@ -138,7 +197,10 @@ function harness() {
       } as OrganizationTreasury;
       return treasury;
     },
-    updateOperation: async (_id: bigint, values: Partial<PrivyProvisioningOperation>) => {
+    updateOperation: async (
+      _id: bigint,
+      values: Partial<PrivyProvisioningOperation>,
+    ) => {
       operation = { ...operation!, ...values };
       return operation;
     },
@@ -148,7 +210,12 @@ function harness() {
     },
     signerSecret: async () => secret,
     saveSignerSecret: async (values: Partial<RoutineSignerSecret>) => {
-      secret = { id: 3n, created_at: now, updated_at: now, ...values } as RoutineSignerSecret;
+      secret = {
+        id: 3n,
+        created_at: now,
+        updated_at: now,
+        ...values,
+      } as RoutineSignerSecret;
       return secret;
     },
   };
@@ -183,23 +250,46 @@ test("provisions one verified organization control boundary and resumes without 
   process.env.TREASURY_ROUTINE_KEY_ENCRYPTION_KEY = "11".repeat(32);
   process.env.TREASURY_ROUTINE_KEY_VERSION = "test-v1";
   const h = harness();
-  const service = createTreasuryService(h.persistence, access as never, "did:privy:admin", h.adapter);
+  const service = createTreasuryService(
+    h.persistence,
+    access as never,
+    "did:privy:admin",
+    h.adapter,
+  );
   const first = await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
   assert.equal(first.summary.status, "READY");
   assert.equal(first.summary.routerConfigured, true);
-  assert.equal(first.technical.walletAddress, "0x1111111111111111111111111111111111111111");
+  assert.equal(
+    first.technical.walletAddress,
+    "0x1111111111111111111111111111111111111111",
+  );
   assert.equal(h.treasury()?.routine_policy_id, "policy-routine");
-  assert.deepEqual(h.calls, { owner: 1, organization: 1, signer: 1, wallet: 1 });
+  assert.deepEqual(h.calls, {
+    owner: 1,
+    organization: 1,
+    signer: 1,
+    wallet: 1,
+  });
   const refreshed = await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
   assert.equal(refreshed.summary.status, "READY");
-  assert.deepEqual(h.calls, { owner: 1, organization: 1, signer: 1, wallet: 1 });
+  assert.deepEqual(h.calls, {
+    owner: 1,
+    organization: 1,
+    signer: 1,
+    wallet: 1,
+  });
 });
 
 test("completed legacy controls resume by adding the Router policy", async () => {
   process.env.TREASURY_ROUTINE_KEY_ENCRYPTION_KEY = "11".repeat(32);
   process.env.TREASURY_ROUTINE_KEY_VERSION = "test-v1";
   const h = harness();
-  const service = createTreasuryService(h.persistence, access as never, "did:privy:admin", h.adapter);
+  const service = createTreasuryService(
+    h.persistence,
+    access as never,
+    "did:privy:admin",
+    h.adapter,
+  );
   await service.setup("f7241e10-f9b1-4f6c-b1f0-443817c4d124");
   h.markLegacyControlsComplete();
 
@@ -207,22 +297,41 @@ test("completed legacy controls resume by adding the Router policy", async () =>
 
   assert.equal(resumed.summary.status, "READY");
   assert.equal(h.treasury()?.routine_policy_id, "policy-routine");
-  assert.equal(h.treasury()?.router_address, "0x38be3a868778df3fc6e37c25ebc4cf29f81077b2");
-  assert.deepEqual(h.calls, { owner: 1, organization: 1, signer: 1, wallet: 1 });
+  assert.equal(
+    h.treasury()?.router_address,
+    "0x38be3a868778df3fc6e37c25ebc4cf29f81077b2",
+  );
+  assert.deepEqual(h.calls, {
+    owner: 1,
+    organization: 1,
+    signer: 1,
+    wallet: 1,
+  });
 });
 
 test("routine key material is per-organization and encrypted at rest", () => {
-  const encryption = { key: Buffer.from("22".repeat(32), "hex"), version: "v1" };
+  const encryption = {
+    key: Buffer.from("22".repeat(32), "hex"),
+    version: "v1",
+  };
   const first = generateRoutineKey(8n, encryption);
   const second = generateRoutineKey(9n, encryption);
   assert.notEqual(first.publicKeyFingerprint, second.publicKeyFingerprint);
   assert.doesNotMatch(first.ciphertext, /BEGIN PRIVATE KEY/);
   const plaintext = unsealRoutineKey(
     8n,
-    { ciphertext: first.ciphertext, iv: first.iv, auth_tag: first.authTag, key_version: first.keyVersion },
+    {
+      ciphertext: first.ciphertext,
+      iv: first.iv,
+      auth_tag: first.authTag,
+      key_version: first.keyVersion,
+    },
     encryption,
   );
   assert.ok(plaintext.length > 100);
+  const authorizationKey = encodeRoutineAuthorizationKey(plaintext);
+  assert.doesNotMatch(authorizationKey, /BEGIN PRIVATE KEY/);
+  assert.deepEqual(Buffer.from(authorizationKey, "base64"), plaintext);
   plaintext.fill(0);
 });
 
@@ -249,10 +358,20 @@ test("routine policy is one exact default-deny Basin execution rule", () => {
   assert.equal(policy.rules[0].method, "eth_sendTransaction");
   assert.equal(policy.rules[0].action, "ALLOW");
   assert.deepEqual(
-    policy.rules[0].conditions.map((condition) => [condition.field_source, condition.field, condition.operator, condition.value]),
+    policy.rules[0].conditions.map((condition) => [
+      condition.field_source,
+      condition.field,
+      condition.operator,
+      condition.value,
+    ]),
     [
       ["ethereum_transaction", "chain_id", "eq", "11155111"],
-      ["ethereum_transaction", "to", "eq", "0x2222222222222222222222222222222222222222"],
+      [
+        "ethereum_transaction",
+        "to",
+        "eq",
+        "0x2222222222222222222222222222222222222222",
+      ],
       ["ethereum_transaction", "value", "eq", "0"],
       ["ethereum_calldata", "function_name", "eq", "executeObligation"],
       ["ethereum_calldata", "executeObligation.amount", "lte", "5000000"],
@@ -265,10 +384,16 @@ test("routine policy is one exact default-deny Basin execution rule", () => {
       ...rule,
       conditions: rule.conditions.map((condition) =>
         condition.field === "to"
-          ? { ...condition, value: "0x2222222222222222222222222222222222222222".toUpperCase() }
+          ? {
+              ...condition,
+              value: "0x2222222222222222222222222222222222222222".toUpperCase(),
+            }
           : condition,
       ),
     })),
   };
-  assert.equal(observedPolicyFingerprint(returnedByPrivy as never), policyFingerprint(policy));
+  assert.equal(
+    observedPolicyFingerprint(returnedByPrivy as never),
+    policyFingerprint(policy),
+  );
 });

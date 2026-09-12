@@ -33,6 +33,19 @@ export function treasuryRepository(db: Database) {
         );
       });
     },
+    routineSignerSecret(organizationId: bigint) {
+      return safely(async () => {
+        recordId.parse(organizationId);
+        return (
+          (
+            await db
+              .select()
+              .from(RoutineSignerSecret)
+              .where(eq(RoutineSignerSecret.organization_id, organizationId))
+          )[0] ?? null
+        );
+      });
+    },
     adminPrivyUserIds(organizationId: bigint) {
       return safely(async () =>
         (

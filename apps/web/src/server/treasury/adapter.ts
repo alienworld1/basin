@@ -37,6 +37,18 @@ export type IntentEvidence = {
     "pending" | "executed" | "failed" | "expired" | "rejected" | "dismissed";
   expiresAt?: Date;
 };
+export type RoutineTransactionEvidence = {
+  status:
+    | "broadcasted"
+    | "confirmed"
+    | "execution_reverted"
+    | "failed"
+    | "replaced"
+    | "finalized"
+    | "provider_error"
+    | "pending";
+  hash?: string;
+};
 
 export type HighAuthorityAuthorizationRequest = {
   requestExpiry: number;
@@ -154,6 +166,7 @@ export interface PrivyTreasuryAdapter {
     requestExpiry?: number;
   }): Promise<WalletEvidence>;
   getIntent(id: string): Promise<IntentEvidence>;
+  getTransaction?(id: string): Promise<RoutineTransactionEvidence>;
   sendHighAuthorityTransaction?(input: {
     walletId: string;
     to: string;
@@ -161,6 +174,13 @@ export interface PrivyTreasuryAdapter {
     idempotencyKey: string;
     authorizationSignature?: string;
     requestExpiry?: number;
+  }): Promise<{ hash: string; transactionId?: string }>;
+  sendRoutineTransaction?(input: {
+    walletId: string;
+    to: string;
+    data: string;
+    idempotencyKey: string;
+    authorizationPrivateKey: string;
   }): Promise<{ hash: string; transactionId?: string }>;
 }
 
@@ -392,13 +412,15 @@ export function createPrivyTreasuryAdapter(): PrivyTreasuryAdapter {
         throw new TreasuryProviderError("AUTHORIZATION_REQUIRED");
       }
       try {
-        return mapWallet(await client.wallets().update(input.walletId, {
-          additional_signers: additionalSigners,
-          authorization_context: {
-            signatures: [input.authorizationSignature],
-          },
-          request_expiry: input.requestExpiry,
-        }));
+        return mapWallet(
+          await client.wallets().update(input.walletId, {
+            additional_signers: additionalSigners,
+            authorization_context: {
+              signatures: [input.authorizationSignature],
+            },
+            request_expiry: input.requestExpiry,
+          }),
+        );
       } catch (error) {
         rethrow(error);
       }
@@ -413,6 +435,19 @@ export function createPrivyTreasuryAdapter(): PrivyTreasuryAdapter {
         };
       } catch (error) {
         rethrow(error);
+      }
+    },
+    async getTransaction(id) {
+      try {
+        const value = await client.transactions().get(id);
+        return {
+          status: value.status,
+          ...(value.transaction_hash
+            ? { hash: value.transaction_hash.toLowerCase() }
+            : {}),
+        };
+      } catch (error) {
+        rethrow(error, "PRIVY_TRANSACTION_LOOKUP");
       }
     },
     async sendHighAuthorityTransaction(input) {
@@ -473,6 +508,36 @@ export function createPrivyTreasuryAdapter(): PrivyTreasuryAdapter {
         };
       } catch (error) {
         rethrow(error, "PRIVY_WALLET_RPC");
+      }
+    },
+    async sendRoutineTransaction(input) {
+      try {
+        const value = await client
+          .wallets()
+          .ethereum()
+          .sendTransaction(input.walletId, {
+            caip2: "eip155:11155111",
+            params: {
+              transaction: {
+                to: input.to,
+                data: input.data,
+                value: "0x0",
+                chain_id: 11_155_111,
+              },
+            },
+            authorization_context: {
+              authorization_private_keys: [input.authorizationPrivateKey],
+            },
+            idempotency_key: input.idempotencyKey,
+          });
+        return {
+          hash: value.hash,
+          ...(value.transaction_id
+            ? { transactionId: value.transaction_id }
+            : {}),
+        };
+      } catch (error) {
+        rethrow(error, "PRIVY_ROUTINE_RPC");
       }
     },
   };

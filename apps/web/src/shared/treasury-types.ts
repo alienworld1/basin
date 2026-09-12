@@ -20,6 +20,8 @@ export type TreasurySummary = {
   account?: {
     address: string;
     ethBalanceWei?: string;
+    usdcBalanceBaseUnits?: string;
+    routerAllowanceBaseUnits?: string;
     balanceCheckedAt?: string;
   };
   operation?: {

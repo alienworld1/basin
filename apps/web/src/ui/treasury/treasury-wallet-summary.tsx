@@ -1,4 +1,5 @@
 import { formatEther } from "viem";
+import { formatUsdcBaseUnits } from "@basin/domain";
 
 import type { TreasurySummary } from "../../shared/treasury-types";
 
@@ -23,7 +24,24 @@ export function TreasuryWalletSummary({
         </p>
       </div>
       <div className="mt-5 shrink-0 sm:mt-0 sm:text-right">
-        <p className="text-xs font-medium text-ink-tertiary">Gas balance</p>
+        {account.usdcBalanceBaseUnits ? (
+          <>
+            <p className="text-xs font-medium text-ink-tertiary">
+              Available to pay
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-ink">
+              {formatUsdcBaseUnits(account.usdcBalanceBaseUnits)}{" "}
+              <span className="text-sm font-medium text-ink-secondary">
+                USDC
+              </span>
+            </p>
+          </>
+        ) : null}
+        <p
+          className={`${account.usdcBalanceBaseUnits ? "mt-4 " : ""}text-xs font-medium text-ink-tertiary`}
+        >
+          Gas balance
+        </p>
         <p className="mt-1 text-xl font-semibold tabular-nums text-ink">
           {account.ethBalanceWei
             ? displayEthBalance(account.ethBalanceWei)

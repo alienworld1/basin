@@ -35,7 +35,9 @@ export function TreasuryControls({
   const [loading, setLoading] = useState(true);
   const [mutating, setMutating] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewMode, setReviewMode] = useState<"account" | "payments">("account");
+  const [reviewMode, setReviewMode] = useState<"account" | "payments">(
+    "account",
+  );
   const [requestError, setRequestError] = useState<string>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -196,7 +198,9 @@ export function TreasuryControls({
     "Create an organization account for Basin payments. Administrators control settings; payment operators receive limited access.";
   if (status === "CONTROL_READY") {
     title = "Organization account ready";
-    helper = "Enable protected payments to allow only approved Basin payments through the reviewed Router.";
+    helper = isAdmin
+      ? "Enable protected payments to allow only approved Basin payments through the reviewed Router."
+      : "An organization administrator needs to enable protected payments before payment operators can continue.";
   } else if (status === "READY") {
     title = "Treasury controls ready";
     helper =
@@ -302,9 +306,12 @@ export function TreasuryControls({
               }}
               disabled={mutating}
             >
-              {mutating ? "Enabling protected payments…" : "Enable protected payments"}
+              {mutating
+                ? "Enabling protected payments…"
+                : "Enable protected payments"}
             </Button>
-          ) : status === "PROVISIONING" && result?.summary.operation?.step === "POLICY_VERIFIED" ? (
+          ) : status === "PROVISIONING" &&
+            result?.summary.operation?.step === "POLICY_VERIFIED" ? (
             <Button
               onClick={() => {
                 setReviewMode("payments");
@@ -312,7 +319,9 @@ export function TreasuryControls({
               }}
               disabled={mutating}
             >
-              {mutating ? "Requesting approval…" : "Retry protected-payment approval"}
+              {mutating
+                ? "Requesting approval…"
+                : "Retry protected-payment approval"}
             </Button>
           ) : status === "NEEDS_ATTENTION" ? (
             <Button

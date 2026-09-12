@@ -56,6 +56,28 @@ async function recordExpired(
 
 export function paymentAccessRepository(db: Database) {
   return {
+    activeOperator(organizationId: bigint, memberId: bigint) {
+      return safely(async () =>
+        Boolean(
+          (
+            await db
+              .select({ id: OrganizationMember.id })
+              .from(OrganizationMember)
+              .where(
+                and(
+                  eq(OrganizationMember.id, recordId.parse(memberId)),
+                  eq(
+                    OrganizationMember.organization_id,
+                    recordId.parse(organizationId),
+                  ),
+                  eq(OrganizationMember.role, "PAYMENT_OPERATOR"),
+                  eq(OrganizationMember.status, "ACTIVE"),
+                ),
+              )
+          )[0],
+        ),
+      );
+    },
     overview(organizationId: bigint) {
       return safely(() =>
         db.transaction(async (tx) => {
