@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BasinWordmark } from "./basin-wordmark";
 import { DesktopTechnicalInspector } from "./desktop-technical-inspector";
 import { MobileNavigation } from "./mobile-navigation";
 import { ShellNavigation } from "./shell-navigation";
@@ -49,7 +50,7 @@ export function AppShell({
           href="/"
           className="focus-ring w-fit text-lg font-semibold tracking-tight"
         >
-          Basin
+          <BasinWordmark className="w-20" />
         </Link>
 
         <div className="mt-12">
@@ -80,7 +81,7 @@ export function AppShell({
           href="/"
           className="focus-ring text-lg font-semibold tracking-tight"
         >
-          Basin
+          <BasinWordmark className="w-20" />
         </Link>
         <MobileNavigation
           navigation={navigation}
