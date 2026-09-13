@@ -50,7 +50,7 @@
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
     "test:consumer": "pnpm run build && tsc --noEmit -p consumer/tsconfig.json",
-    "check:package": "publint --pack false --strict && attw --pack . --profile esm-only",
+    "check:package": "publint --pack false --strict && node scripts/check-package.mjs",
     "pack:check": "pnpm run build && pnpm run check:package && pnpm pack --dry-run",
     "prepack": "pnpm run build",
     "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run test:consumer && pnpm run check:package",
