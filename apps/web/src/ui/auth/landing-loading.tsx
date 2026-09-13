@@ -1,8 +1,10 @@
+import { BasinWordmark } from "../basin-wordmark";
+
 export function LandingLoading() {
   return (
     <div className="min-h-dvh px-6 py-6 sm:px-8 lg:px-12 lg:py-8">
       <header className="flex items-center justify-between border-b border-line pb-6">
-        <span className="text-lg font-semibold tracking-tight">Basin</span>
+        <BasinWordmark className="w-20" />
         <span
           className="h-5 w-32 rounded-xs bg-surface-muted"
           aria-hidden="true"

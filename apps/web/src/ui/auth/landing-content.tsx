@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BasinWordmark } from "../basin-wordmark";
 import { Button } from "../button";
 
 type LandingContentProps = {
@@ -18,7 +19,7 @@ export function LandingContent({
   return (
     <div className="min-h-dvh px-6 py-6 sm:px-8 lg:px-12 lg:py-8">
       <header className="flex items-center justify-between border-b border-line pb-6">
-        <span className="text-lg font-semibold tracking-tight">Basin</span>
+        <BasinWordmark className="w-20" />
         <span className="text-sm text-ink-tertiary">Business payments</span>
       </header>
       <main
@@ -75,7 +76,7 @@ export function LandingContent({
       </main>
       <footer className="border-t border-line pt-5 text-sm text-ink-tertiary">
         <Link className="focus-ring transition-colors hover:text-ink" href="/">
-          Basin
+          <BasinWordmark className="w-20" />
         </Link>
       </footer>
     </div>
