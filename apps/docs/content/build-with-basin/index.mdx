@@ -1,0 +1,18 @@
+---
+title: Build with Basin
+description: Public reads and authority-preserving operation preparation with basin-sdk.
+---
+
+# Build with Basin
+
+`basin-sdk` is a framework-independent, ESM-only TypeScript package for the shipped Basin v1 protocol on **Ethereum Sepolia**. It reads public protocol state and prepares only supported authority-specific operations. It never signs, submits, relays, selects an arbitrary signer, provides Privy credentials, accesses a Basin database, or exposes a public destination directory.
+
+## Integration sequence
+
+1. [Install](/build-with-basin/install) a read-only client with a viem public client.
+2. Normalize and resolve a Basin identity at a coherent Sepolia observation.
+3. Inspect the organization relationship and settlement generation/commitment.
+4. Prepare only a supported approval or obligation-bound payment operation with the right authority.
+5. Submit through your own authorized infrastructure and [verify receipt evidence](/build-with-basin/receipt-verification).
+
+Use a separate authorized channel for protected settlement descriptors. Your application owns authentication, authorization, signing, and submission.

@@ -1,0 +1,14 @@
+---
+title: Approved Payees
+description: Organization-specific approval of a durable payee relationship.
+---
+
+# Approved Payees
+
+An Approved Payee is an organization-specific relationship, not a global badge and not a safe-wallet list. The organization discovers an identity, provisions and approves the relationship, and the payee accepts it through the required authority path.
+
+## Relationship states
+
+`Pending` needs more lifecycle work. `Active` has current relationship, activation, and permission evidence. `Expired`, `Revoked`, and `Reapproval required` cannot be used for routine payment. Reapproval and renewal never silently treat stale evidence as active.
+
+Only the organization can approve or revoke its relationship; only the payee controller can update permitted receiving state.

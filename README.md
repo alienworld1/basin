@@ -19,6 +19,19 @@ pnpm dev
 
 Open `http://localhost:3000`. The public product page is at `/`, the authenticated workspace entry is at `/app`, and configuration health is available at `/api/health`.
 
+## Documentation and release checks
+
+The public documentation application lives in `apps/docs` and is intentionally separate from the authenticated product. It has no product secrets, database access, wallet connection, or API routes.
+
+```bash
+pnpm --filter docs dev -- --port 3001
+pnpm docs:check
+pnpm --filter docs build
+pnpm release:check
+```
+
+`pnpm release:check` includes deterministic package, documentation, product build, and database-configuration checks. The final Sepolia/Privy smoke path remains opt-in because it needs real credentials and funded disposable accounts: run `pnpm --filter basin-sdk smoke:sepolia` only with the reviewed release environment. Follow the manual lifecycle in [the release checklist](docs/release-evidence.md) before deployment.
+
 Create a Privy development app, enable email one-time-code login, add `http://localhost:3000` as an allowed origin, and set `NEXT_PUBLIC_PRIVY_APP_ID` plus `PRIVY_APP_SECRET`. `NEXT_PUBLIC_PRIVY_CLIENT_ID` and `PRIVY_JWT_VERIFICATION_KEY` are optional. Personal workspace creation provisions an embedded EVM wallet on demand; Organization creation intentionally does not provision a treasury wallet yet.
 
 Identity setup requires `SEPOLIA_RPC_URL`, the controlled ENSv2

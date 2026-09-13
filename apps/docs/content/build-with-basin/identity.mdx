@@ -1,0 +1,19 @@
+---
+title: Identity resolution
+description: Normalize and resolve Basin identities against coherent Ethereum Sepolia state.
+---
+
+# Identity resolution
+
+Use `identity.normalize` for Basin namespace validation, then resolve the normalized identity. The result is observed at a reported block and can be `ACTIVE`, `NOT_FOUND`, or `REAPPROVAL_REQUIRED`.
+
+```ts
+const name = basin.identity.normalize("alice.basin.eth");
+const identity = await basin.identity.resolve(name);
+
+if (identity.status !== "ACTIVE") {
+  // Treat not found, reapproval, and unavailable failures distinctly in your UI.
+}
+```
+
+The SDK throws semantic errors such as `INVALID_INPUT`, `UNSUPPORTED_NETWORK`, `INVALID_DEPLOYMENT`, and evidence-related failures. Do not infer a receiving destination from an identity read.

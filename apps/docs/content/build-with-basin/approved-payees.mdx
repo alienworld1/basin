@@ -1,0 +1,20 @@
+---
+title: Approved Payee integration
+description: Inspect relationships and prepare staged acceptance only when supported.
+---
+
+# Approved Payee integration
+
+An identity and an organization relationship are different objects. Inspect the relationship for current lifecycle state, expiry, activation, and permission-profile verification before treating it as payable.
+
+```ts
+const payee = await basin.payees.verify({
+  organizationName: "acme.basin.eth",
+  organization: "0x0000000000000000000000000000000000000001",
+  identityName: "alice.basin.eth",
+});
+
+if (!payee.active) throw new Error("The Approved Payee is not active.");
+```
+
+`payees.prepareApproval` supports only a staged existing-relationship flow: it first returns the payee's typed-data acceptance request, then an exact organization-admin activation call after the consumer supplies that signature. The SDK does not provision relationships, sign, or submit either stage.

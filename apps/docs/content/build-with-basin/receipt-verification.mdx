@@ -1,0 +1,18 @@
+---
+title: Receipt verification
+description: Verify canonical, payment-time Router evidence field by field.
+---
+
+# Receipt verification
+
+Provide `receipts.verify` a receipt evidence object captured from the economic receipt, including the transaction, payment identifier, obligation and relationship fields, amount, asset, commitment, and payment-time authority descriptor. It returns `VERIFIED`, `INVALID`, or `EVIDENCE_UNAVAILABLE`.
+
+```ts
+const result = await basin.receipts.verify(receiptEvidence);
+
+if (result.verificationStatus === "EVIDENCE_UNAVAILABLE") {
+  // Preserve uncertainty and offer a safe check-again path.
+}
+```
+
+`VERIFIED` requires a canonical successful receipt, sufficient confirmation, one matching Router event, and matching field-level evidence. A current relationship read after rotation or revocation is not a substitute for payment-time evidence.

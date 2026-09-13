@@ -1,0 +1,12 @@
+---
+title: Receiving
+description: Payee-controlled receiving updates without a public destination directory.
+---
+
+# Receiving
+
+Your receiving account is protected relationship data. Basin publishes a settlement commitment and generation, not a public destination lookup. The authorized payment path receives the protected settlement descriptor through a separate authorized channel and verifies it against that commitment before preparing a Router call.
+
+## Update safely
+
+Changing receiving creates a new settlement generation. An existing Approved Payee relationship can continue only under its shipped security and activation rules. A payer never needs to edit a destination field to follow a valid change. If the current relationship evidence is unavailable or stale, Basin asks you to check again rather than guessing.

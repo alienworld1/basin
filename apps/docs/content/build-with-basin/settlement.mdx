@@ -1,0 +1,22 @@
+---
+title: Settlement generation
+description: Inspect public settlement commitment state without resolving a destination.
+---
+
+# Settlement generation and commitment
+
+Settlement reads expose the active relationship's epoch and commitment. They intentionally do not return a destination. A protected descriptor is supplied only by an authorized caller when preparing a payment; the SDK checks the descriptor against the current commitment and generation.
+
+```ts
+const settlement = await basin.settlement.get({
+  organizationName: "acme.basin.eth",
+  organization: "0x0000000000000000000000000000000000000001",
+  identityName: "alice.basin.eth",
+});
+
+if (!settlement.available || !settlement.commitment) {
+  // Do not pay. Refresh relationship evidence or recover the relationship first.
+}
+```
+
+The address above is an illustrative placeholder, not a live organization. The receiving descriptor must remain private to the authorized payment path.

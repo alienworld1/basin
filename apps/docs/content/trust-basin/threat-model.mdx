@@ -1,0 +1,21 @@
+---
+title: Threat model
+description: What Basin v1 prevents, detects, and cannot prevent.
+---
+
+# Threat model
+
+| Threat | Basin response and layer | Residual risk / recovery |
+| --- | --- | --- |
+| Compromised payee controller | Commitment and generation checks prevent a stale protected descriptor from being used; ENSv2 scope limits the controller surface | A current authorized controller can update permitted receiving state; revoke/reapprove relationship if trust changes |
+| Mistaken or malicious approval | Approval is organization-scoped and explicit | A real organization authority can approve the wrong real-world party; governance must correct or revoke it |
+| Compromised organization admin/quorum | Privy controls and Router authority constrain the configured path | High authority can create capacity within its actual policy; recover through organization governance |
+| Routine operator abuse | Router requires an active relationship, current settlement commitment, exact obligation capacity, and unique payment ID | Operator can use valid authorized capacity only; remove access and reconcile suspicious operations |
+| Basin backend/registrar compromise | Narrow ENSv2 permissions and Router evidence prevent fabricated acceptance/destination/redirection | Availability and approved namespace operations can be affected; verify public protocol evidence |
+| Privy misconfiguration or outage | Policy denial is surfaced distinctly; Router remains the final protocol boundary | Provider availability and policy configuration are external assumptions; retry safely after recovery |
+| ENSv2 beta/deployment change | SDK checks pinned deployment/version evidence | Interface or deployment change can make reads unavailable; update reviewed manifests and release together |
+| Stale generation, root, or prepared operation | Live reads and Router validation reject stale relationships and descriptor commitments | User must refresh/review again; do not resubmit an ambiguous mutation |
+| RPC outage, inconsistent evidence, or reorg | Verification returns `EVIDENCE_UNAVAILABLE`, not valid/invalid by guesswork | Wait for canonical evidence and check again; providers are an availability assumption |
+| Replay or duplicate submission | Idempotency journals and Router payment-ID consumption constrain duplicates | A possible broadcast remains unknown until reconciliation |
+| Leaked protected descriptor or metadata | Descriptor is not a public read and must remain in authorized channels | A leak can expose sensitive destination/context; rotate receiving and follow incident process |
+| Direct transfer from unrelated wallet | Outside Basin's configured authority path | Basin cannot prevent unrestricted external transfers; use treasury controls and operational policy |

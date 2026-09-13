@@ -1,0 +1,12 @@
+---
+title: Revocation and stale state
+description: How Basin v1 treats refresh, expiry, revocation, replay, and ambiguous broadcasts.
+---
+
+# Revocation and stale state
+
+Preparation is not permission to execute forever. Before Router execution, Basin checks live relationship security evidence, activation, settlement generation and commitment, obligation capacity, and replay state. A new generation, security root, expiry, or revocation makes a prior review stale rather than silently usable.
+
+## Recovery rules
+
+Refresh or reconciliation may re-read and recover an existing operation. It must not issue a second identity claim, activation, settlement update, obligation authorization, payment, or revocation. An ambiguous broadcast remains pending or unknown until canonical evidence resolves it. An earlier receipt remains historically verifiable even if a later relationship read is revoked.

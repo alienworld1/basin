@@ -1,0 +1,38 @@
+---
+title: Basin protocol v1
+description: A whitepaper-style account of Basin's durable payment relationship protocol.
+---
+
+# Basin protocol v1
+
+## 1. Problem and scope
+
+Basin supports repeated organization payments where approving a person or business should not mean pinning an immutable destination wallet. v1 is Ethereum Sepolia, USDC, and exact obligation-bound payment only.
+
+## 2. Actors and durable objects
+
+The durable objects are a global Basin identity, an organization-specific Approved Payee relationship, its security/activation evidence, settlement generation and commitment, an obligation, a unique payment identifier, and an immutable economic receipt. Wallets, RPC endpoints, application sessions, caches, and private descriptors are replaceable infrastructure.
+
+## 3. Identity and Approved Payee lifecycle
+
+ENSv2 holds the identity lifecycle and organization relationship state. The organization provisions, approves, renews, or revokes its relationship; the payee accepts it. Relationship activation binds the bilateral security evidence. Expiry, revocation, or permission-profile mismatch makes the relationship non-payable.
+
+## 4. Settlement authority
+
+The payee controller updates permitted receiving state. The public record exposes only a versioned generation and protected-descriptor commitment. An authorized descriptor is tested against that commitment at payment preparation and execution; it is not public identity output.
+
+## 5. Obligations and Router execution
+
+Organization authority creates and authorizes an obligation with its relationship binding, remaining capacity, validity, and metadata hash. BasinRouter verifies current relationship/security evidence, settlement generation/commitment, obligation capacity, unique payment ID, and exact USDC execution. The routine operator executes only this already valid path.
+
+## 6. Receipts and historical verification
+
+Receipt verification compares the canonical Router event and payment-time obligation evidence field by field. It returns `VERIFIED`, `INVALID`, or `EVIDENCE_UNAVAILABLE`. A later settlement rotation or revocation does not change historical payment-time evidence.
+
+## 7. Revocation, replay, and reconciliation
+
+Revocation blocks future payment use but not historical inspection. Idempotency and consumed payment identifiers prevent duplicate core operations. Refresh and reconciliation re-read existing work; an ambiguous broadcast stays pending until evidence resolves it.
+
+## 8. Trust, privacy, and versioning
+
+Protocol truth comes from ENSv2, Router events, signatures, and canonical chain evidence; authenticated metadata and journals do not override it. Basin v1 depends on correct ENSv2, Router, Privy policy, RPC, organization, payee, and integrator operation. It claims no anonymity or global identity verification. See [Trust Basin](/trust-basin) and [Sepolia deployments](/build-with-basin/deployments) for the complete boundaries and pinned references.

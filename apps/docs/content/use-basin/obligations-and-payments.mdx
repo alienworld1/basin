@@ -1,0 +1,14 @@
+---
+title: Obligations and payments
+description: Exact, obligation-bound USDC payments with live authority checks.
+---
+
+# Obligations and payments
+
+An obligation defines the economically relevant payment capacity: the Approved Payee relationship, amount limit, validity, and purpose metadata commitment. It is not a generic address-payment form.
+
+## Before execution
+
+An authorized actor creates and authorizes the obligation. A permitted operator reviews an exact amount and the current relationship evidence. Immediately before execution, BasinRouter checks the frozen relationship/security evidence, current settlement generation and commitment, available obligation capacity, replay protection, and the exact USDC transfer.
+
+The ordinary payment UI does not accept a recipient destination. Conflicting human instructions cannot redirect a Basin payment.

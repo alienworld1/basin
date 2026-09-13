@@ -1,0 +1,18 @@
+---
+title: Authority model
+description: Who can act in Basin v1, what prevents misuse, and what each actor cannot do.
+---
+
+# Authority model
+
+| Actor | Can do | Cannot do | Enforcing layer |
+| --- | --- | --- | --- |
+| Organization admin / high authority | Provision, approve, renew, revoke, manage payment access, create/cancel obligations, govern treasury controls | Replace payee receiving state or accept for the payee | Organization auth, ENSv2, Privy policy, Router |
+| Payee controller | Accept a relationship and update permitted settlement state | Approve itself for an organization or create payer capacity | ENSv2 relationship permission scope, activation verification |
+| Routine payment operator | Execute an already authorized, exact obligation-bound Router payment | Add/revoke payees, alter receiving, create capacity, or loosen controls | Current role checks, Privy policy, Router |
+| Basin backend / registrar | Narrow namespace registration and authenticated orchestration | Invent acceptance, redirect a committed destination, or make database state valid | ENSv2 permissions and Router validation |
+| ENSv2 | Stores identity, relationship, generation/expiry, records, and permissions | Execute payment or protect offchain metadata | Onchain contracts |
+| Privy | Provides configured organization wallet and policy controls | Make an invalid Router call valid | Provider policy and application integration |
+| BasinRouter | Validates authority evidence, generation, commitment, capacity, replay, and exact transfer | Decide a new recipient or approve a relationship | Onchain contract |
+
+The consuming application supplies authentication, the appropriate authorizer, submission, and any authorized private descriptor channel. It must not treat the Basin UI or a database flag as protocol validity.

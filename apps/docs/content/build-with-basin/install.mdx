@@ -1,0 +1,27 @@
+---
+title: Install basin-sdk
+description: Install the published ESM SDK and create a Sepolia read client.
+---
+
+# Install basin-sdk
+
+Install the published package and viem. Node consumers need Node.js 20.9 or newer; browser consumers need a browser-compatible viem transport.
+
+```sh
+pnpm add basin-sdk viem
+```
+
+```ts
+import { createBasinClient } from "basin-sdk";
+import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http("https://ethereum-sepolia-rpc.publicnode.com"),
+});
+
+const basin = createBasinClient({ publicClient });
+```
+
+The package is ESM-only. The SDK validates its v1 deployment on Ethereum Sepolia before a protocol read; it does not open a wallet connection or require Basin authentication.

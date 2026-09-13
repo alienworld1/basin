@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "nextra-theme-docs/style.css";
+
+:root {
+  --bg: #f4f5f2;
+  --surface: #fafbf8;
+  --surface-muted: #eceee9;
+  --ink: #171a18;
+  --ink-secondary: #565c57;
+  --line: #d8dcd6;
+  --accent: #247a5a;
+  --danger: #b94a3f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151816;
+    --surface: #1b1f1c;
+    --surface-muted: #292f2a;
+    --ink: #f1f3ef;
+    --ink-secondary: #b4bab4;
+    --line: #343a35;
+    --accent: #5fbf91;
+    --danger: #eb8176;
+  }
+}
+
+html { min-width: 320px; scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); overflow-x: hidden; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+code, pre { font-family: var(--font-ibm-plex-mono), ui-monospace, monospace; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

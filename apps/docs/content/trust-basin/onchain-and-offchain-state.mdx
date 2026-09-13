@@ -1,0 +1,17 @@
+---
+title: Onchain and offchain state
+description: Evidence categories and the difference between current and historical truth.
+---
+
+# Onchain and offchain state
+
+## Evidence categories
+
+| Category | Examples | Authority |
+| --- | --- | --- |
+| Onchain / signed protocol truth | ENSv2 identity and relationship state, permission evidence, settlement commitment/generation, Router obligations and events, payee acceptance signature | ENSv2 and BasinRouter at an observed block |
+| Authenticated offchain metadata | Workspace labels, human purpose text, operation journals, receipt presentation | Existing authenticated Basin application |
+| Protected private data | Settlement descriptor/destination, secrets, credentials, invitation secrets | Authorized parties only |
+| Cache / journal | Reconciliation state and request idempotency records | A recovery aid, never protocol validity |
+
+Current state answers whether a relationship is usable now. Historical receipt verification instead uses payment-time canonical event and obligation evidence. A later rotation, expiry, or revocation must not rewrite past evidence.

@@ -1,0 +1,12 @@
+---
+title: Receipts
+description: Human financial records backed by payment-time protocol evidence.
+---
+
+# Receipts
+
+A Basin receipt presents the payee, amount, asset, purpose, payment status, and technical evidence in that order. The technical inspector exposes the transaction and immutable payment-time fields without making infrastructure the primary story.
+
+## Verification is three-state
+
+`Verified` means the canonical payment event and field-level evidence match. `Invalid` means evidence conflicts. `Evidence unavailable` means Basin could not obtain enough chain evidence; it is not a failed payment and it is not verification. A successful transaction alone, or current ENS state after a later update, is not enough to verify a historical receipt.

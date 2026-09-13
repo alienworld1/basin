@@ -1,0 +1,10 @@
+---
+title: Protocol versions
+description: Basin v1 compatibility and intentionally unsupported versions.
+---
+
+# Protocol versions
+
+`basin-sdk` 0.1.0 targets Basin protocol version `1` on Ethereum Sepolia. The Router, activation contract, identity record, settlement record, and supported asset are all version-bound. The client rejects an unsupported network or mismatched deployment rather than attempting a best-effort read.
+
+Mainnet, other networks, other assets, multi-chain behavior, and unshipped protocol versions are unsupported. Version changes must update checked-in manifests, public SDK metadata, examples, and release checks together.

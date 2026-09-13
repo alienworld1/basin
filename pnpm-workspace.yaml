@@ -10,3 +10,6 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   utf-8-validate: false
+
+patchedDependencies:
+  nextra-theme-docs@4.6.1: patches/nextra-theme-docs@4.6.1.patch

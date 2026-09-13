@@ -1,0 +1,24 @@
+---
+title: Payment preparation
+description: Prepare exact, obligation-bound Router calls without signing or submission.
+---
+
+# Payment preparation
+
+`payments.prepare` accepts an obligation ID, unique payment ID, exact amount, current identity/relationship inputs, and an authorized protected settlement descriptor. It re-reads live authority and returns a call that requires `PAYMENT_OPERATOR` authority.
+
+```ts
+const prepared = await basin.payments.prepare({
+  obligationId: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  paymentId: "0x0000000000000000000000000000000000000000000000000000000000000001",
+  amount: 1_000_000n,
+  descriptor: protectedDescriptor,
+  organizationName: "acme.basin.eth",
+  organization: "0x0000000000000000000000000000000000000001",
+  identityName: "alice.basin.eth",
+});
+
+const call = prepared.calls[0];
+```
+
+The values are placeholders. Your application must protect the descriptor, authorize the correct actor, submit `call` through its own permitted signer path, and handle a stale, revoked, expired, or insufficient-capacity result without retrying a possibly broadcast payment.

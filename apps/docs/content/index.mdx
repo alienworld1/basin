@@ -1,0 +1,19 @@
+---
+title: Basin documentation
+description: Payment relationships, not wallet whitelists.
+---
+
+# Payment relationships, not wallet whitelists.
+
+Basin lets an organization approve **who** it can pay while the payee controls **where** funds are received. That split keeps a receiving-account change from becoming a new payee approval, without turning a public identity lookup into a destination directory.
+
+## Choose a path
+
+- [Use Basin](/use-basin) — Personal and Organization workflows for receiving, approval, payments, receipts, and revocation.
+- [Build with Basin](/build-with-basin) — the supported `basin-sdk` read and preparation surface for Ethereum Sepolia.
+- [Trust Basin](/trust-basin) — enforcement boundaries, evidence categories, threats, and limitations.
+- [Protocol](/protocol) — the complete v1 model, from durable identity through receipt verification.
+
+## Network and release scope
+
+Basin v1 supports **Ethereum Sepolia** and USDC only. It does not support mainnet, multi-chain payments, public receiving-account discovery, or a generic payment API. Run the product locally with `pnpm dev`, or inspect [basin-sdk on npm](https://www.npmjs.com/package/basin-sdk) and the [public source](https://github.com/alienworld1/basin).
