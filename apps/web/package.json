@@ -18,7 +18,7 @@
     "@basin/contracts": "workspace:*",
     "@basin/domain": "workspace:*",
     "@basin/ens": "workspace:*",
-    "basin-sdk": "workspace:*",
+    "basin-sdk": "0.1.0",
     "@privy-io/node": "^0.34.0",
     "@privy-io/react-auth": "^3.40.0",
     "@react-spring/web": "^10.0.3",

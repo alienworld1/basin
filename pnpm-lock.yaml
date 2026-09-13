@@ -88,8 +88,8 @@ importers:
         specifier: ^10.0.3
         version: 10.1.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       basin-sdk:
-        specifier: workspace:*
-        version: link:../../packages/sdk
+        specifier: 0.1.0
+        version: 0.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.5.4)
       canonicalize:
         specifier: ^2.1.0
         version: 2.1.0
@@ -3455,6 +3455,10 @@ packages:
     resolution: {integrity: sha512-H0ulySigv6icDJ1F7SjtdCD6PrhTpdYCmP0CactWy1+ekh0AFd0o1Wn5T8b+hnTmdBx19u9yhL6wvCylXMY7zw==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  basin-sdk@0.1.0:
+    resolution: {integrity: sha512-f5pi3evD74IF7Zjl/YEDzhPQbGAKaTq4tRki4M9DJ/vhBZkup5yQQSeF0mUUH2OmZ8bZPsbDtlsF55/W8KSe9w==}
+    engines: {node: '>=20.9.0'}
 
   better-react-mathjax@2.3.0:
     resolution: {integrity: sha512-K0ceQC+jQmB+NLDogO5HCpqmYf18AU2FxDbLdduYgkHYWZApFggkHE4dIaXCV1NqeoscESYXXo1GSkY6fA295w==}
@@ -11696,6 +11700,15 @@ snapshots:
   base64-js@1.5.1: {}
 
   baseline-browser-mapping@2.11.20: {}
+
+  basin-sdk@0.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.5.4):
+    dependencies:
+      viem: 2.56.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.5.4)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
 
   better-react-mathjax@2.3.0(react@19.2.8):
     dependencies:
