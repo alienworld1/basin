@@ -13,6 +13,19 @@ import { Button } from "../button";
 import { ActivityRow } from "./activity-row";
 import { ReceiptDocument } from "../receipts/receipt-document";
 
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function abortRequest(controller?: AbortController) {
+  if (!controller || controller.signal.aborted) return;
+  try {
+    controller.abort();
+  } catch (error) {
+    if (!isAbortError(error)) throw error;
+  }
+}
+
 export function ActivitySurface({
   workspaceId,
   receiptId,
@@ -30,39 +43,43 @@ export function ActivitySurface({
   const [loadingMore, setLoadingMore] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [checking, setChecking] = useState(false);
-  const controller = useRef<AbortController | undefined>(undefined);
+  const receiptController = useRef<AbortController | undefined>(undefined);
+  const activitySequence = useRef(0);
   const activeWorkspaceId = useRef(workspaceId);
   const request = useCallback(
-    (path: string) =>
+    (path: string, signal?: AbortSignal) =>
       authenticatedRequest(auth.getAccessToken, path, {
-        signal: controller.current?.signal,
+        signal,
       }),
     [auth.getAccessToken],
   );
   const loadActivity = useCallback(async () => {
+    const sequence = ++activitySequence.current;
     setLoading(true);
     setError(undefined);
     try {
-      controller.current?.abort();
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        throw error;
-      }
-    }
-    controller.current = new AbortController();
-    try {
-      const response = await request(
-        `/api/activity?workspaceId=${workspaceId}`,
-      );
+      const response = await request(`/api/activity?workspaceId=${workspaceId}`);
       if (!response?.ok) throw new Error();
       const result = (await response.json()) as ActivityListDto;
-      if (activeWorkspaceId.current !== workspaceId) return;
+      if (
+        activeWorkspaceId.current !== workspaceId ||
+        sequence !== activitySequence.current
+      )
+        return;
       setList(result);
     } catch {
-      if (activeWorkspaceId.current !== workspaceId) return;
+      if (
+        activeWorkspaceId.current !== workspaceId ||
+        sequence !== activitySequence.current
+      )
+        return;
       setError("We couldn't load activity. Try again.");
     } finally {
-      if (activeWorkspaceId.current === workspaceId) setLoading(false);
+      if (
+        activeWorkspaceId.current === workspaceId &&
+        sequence === activitySequence.current
+      )
+        setLoading(false);
     }
   }, [request, workspaceId]);
   const check = useCallback(async () => {
@@ -71,6 +88,7 @@ export function ActivitySurface({
     try {
       const response = await request(
         `/api/receipts/${receiptId}/verification?workspaceId=${workspaceId}`,
+        receiptController.current?.signal,
       );
       if (!response?.ok) throw new Error();
       const result = (await response.json()) as ReceiptVerificationDto;
@@ -137,26 +155,41 @@ export function ActivitySurface({
   }, [workspaceId]);
   useEffect(() => {
     void Promise.resolve().then(loadActivity);
-    return () => controller.current?.abort();
+    return () => {
+      activitySequence.current += 1;
+    };
   }, [loadActivity]);
   useEffect(() => {
+    abortRequest(receiptController.current);
+    const controller = new AbortController();
+    receiptController.current = controller;
     void Promise.resolve().then(async () => {
       setReceipt(undefined);
       setVerification(undefined);
       if (!receiptId) return;
-      const response = await request(
-        `/api/receipts/${receiptId}?workspaceId=${workspaceId}`,
-      );
-      if (activeWorkspaceId.current !== workspaceId) return;
-      if (!response?.ok) {
-        setError("We couldn't find that receipt.");
-        return;
+      try {
+        const response = await request(
+          `/api/receipts/${receiptId}?workspaceId=${workspaceId}`,
+          controller.signal,
+        );
+        if (activeWorkspaceId.current !== workspaceId || controller.signal.aborted)
+          return;
+        if (!response?.ok) {
+          setError("We couldn't find that receipt.");
+          return;
+        }
+        const result = (await response.json()) as ReceiptDetailDto;
+        if (activeWorkspaceId.current !== workspaceId || controller.signal.aborted)
+          return;
+        setReceipt(result);
+        void check();
+      } catch (error) {
+        if (activeWorkspaceId.current !== workspaceId || isAbortError(error))
+          return;
+        setError("We couldn't load that receipt. Try again.");
       }
-      const result = (await response.json()) as ReceiptDetailDto;
-      if (activeWorkspaceId.current !== workspaceId) return;
-      setReceipt(result);
-      void check();
     });
+    return () => abortRequest(controller);
   }, [check, receiptId, request, workspaceId]);
   const openReceipt = (id: string) =>
     router.push(`/app?workspace=${workspaceId}&section=activity&receipt=${id}`);

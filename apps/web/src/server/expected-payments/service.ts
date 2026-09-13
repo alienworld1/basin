@@ -99,11 +99,15 @@ function projectedState(row: ReadRow) {
       reason: relationshipProblem(row),
     };
   }
+  if (row.expectedPayment.status_reason_code) {
+    return {
+      status: "ATTENTION" as const,
+      reason: reasonLabels[row.expectedPayment.status_reason_code],
+    };
+  }
   return {
     status: row.expectedPayment.status,
-    reason: row.expectedPayment.status_reason_code
-      ? reasonLabels[row.expectedPayment.status_reason_code]
-      : undefined,
+    reason: undefined,
   };
 }
 
@@ -152,7 +156,7 @@ function detailDto(row: ReadRow, access: Access): ExpectedPaymentDetailDto {
     canAuthorize:
       !recipient &&
       access.memberRole === "ADMIN" &&
-      row.expectedPayment.status === "EXPECTED" &&
+      base.status === "EXPECTED" &&
       !row.expectedPayment.obligation_record_id &&
       !row.expectedPayment.payment_record_id,
     obligationId: row.expectedPayment.obligation_record_id?.toString(),

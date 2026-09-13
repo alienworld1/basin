@@ -9,8 +9,19 @@ import {
   reconcileInput,
   resolveInput,
 } from "../src/server/approved-payees/input";
+import { approvalRouterConfiguration } from "../src/server/approved-payees/config";
+import { basinRouterManifest } from "../src/server/config/basin-router-manifest";
 
 const idempotencyKey = "91a58b23-33ae-4426-a57e-2c098fe30e91";
+
+test("relationship acceptance uses the reviewed payment router", () => {
+  const router = approvalRouterConfiguration();
+  assert.ok(basinRouterManifest);
+  assert.deepEqual(router, {
+    address: basinRouterManifest.address,
+    version: basinRouterManifest.version,
+  });
+});
 
 test("approved-payee requests accept identifiers and intent, never authority overrides", () => {
   assert.deepEqual(

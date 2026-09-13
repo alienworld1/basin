@@ -342,10 +342,14 @@ export function ApprovedPayees({
       await loadDetail(detail.id);
       await loadList();
     } catch (caught) {
+      const message =
+        caught instanceof Error
+          ? caught.message
+          : "We couldn't prepare the relationship acceptance. Try again.";
       setError(
-        (caught as Error).message.includes("rejected")
+        message.includes("rejected")
           ? "Authorization was cancelled. No new action was submitted."
-          : (caught as Error).message,
+          : message,
       );
     } finally {
       setBusy(false);
@@ -433,6 +437,24 @@ export function ApprovedPayees({
       setSheet(null);
       await loadList();
       if (prepared.relationshipId) await loadDetail(prepared.relationshipId);
+    } catch (caught) {
+      setError((caught as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const continueAuthorization = async () => {
+    if (!detail?.operation) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const authorized = await authorizeOrganizationOperation(detail.operation.id);
+      if (authorized.operation.status !== "CONFIRMED") {
+        setError(authorized.operation.message);
+        return;
+      }
+      await Promise.all([loadDetail(detail.id), loadList()]);
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
@@ -631,14 +653,21 @@ export function ApprovedPayees({
             ) : null}
           </div>
         ) : (
-          <ApprovalReview
-            organizationName={workspace.name}
-            payee={resolved}
-            expiry={expiry}
-            busy={busy}
-            onExpiryChange={setExpiry}
-            onApprove={() => void approve()}
-          />
+          <>
+            <ApprovalReview
+              organizationName={workspace.name}
+              payee={resolved}
+              expiry={expiry}
+              busy={busy}
+              onExpiryChange={setExpiry}
+              onApprove={() => void approve()}
+            />
+            {error ? (
+              <p role="alert" className="mt-6 text-sm text-state-danger">
+                {error}
+              </p>
+            ) : null}
+          </>
         )}
       </Sheet>
       <Sheet
@@ -714,6 +743,13 @@ export function ApprovedPayees({
               setError(undefined);
               setSheet("reapprove");
             }}
+            onContinueAuthorization={
+              organization &&
+              detail.operation?.kind !== "ACCEPT" &&
+              detail.operation?.status === "AWAITING_AUTHORIZATION"
+                ? () => void continueAuthorization()
+                : undefined
+            }
             onRevoke={() => {
               revocationKey.current = crypto.randomUUID();
               setRevocationPhase("idle");

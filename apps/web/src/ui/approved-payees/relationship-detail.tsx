@@ -16,6 +16,7 @@ export function RelationshipDetail({
   onAccept,
   onSetupReceiving,
   onReapprove,
+  onContinueAuthorization,
   onRevoke,
   onCheck,
   onCreateExpectedPayment,
@@ -25,6 +26,7 @@ export function RelationshipDetail({
   onAccept: () => void;
   onSetupReceiving: () => void;
   onReapprove: () => void;
+  onContinueAuthorization?: () => void;
   onRevoke: () => void;
   onCheck: () => void;
   onCreateExpectedPayment?: () => void;
@@ -122,6 +124,11 @@ export function RelationshipDetail({
         {detail.canReapprove ? (
           <Button disabled={busy} onClick={onReapprove}>
             Re-establish approval
+          </Button>
+        ) : null}
+        {onContinueAuthorization ? (
+          <Button disabled={busy} onClick={onContinueAuthorization}>
+            {busy ? "Continuing approval…" : "Continue approval"}
           </Button>
         ) : null}
         {detail.canRevoke ? (

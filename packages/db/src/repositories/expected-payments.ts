@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import {
   assertExpectedPaymentTransition,
@@ -667,6 +667,7 @@ export function expectedPaymentRepository(db: Database) {
               eq(ApprovedPayee.status, "ACTIVE"),
               isNull(ApprovedPayee.revoked_at),
               isNotNull(ApprovedPayee.relationship_name),
+              gt(ApprovedPayeeGeneration.expires_at, new Date()),
             ),
           )
           .orderBy(desc(ApprovedPayee.id)),

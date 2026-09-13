@@ -57,17 +57,6 @@ export function Sheet({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    const breakpoint = window.matchMedia("(min-width: 768px)");
-    const closeAcrossBreakpoint = () => {
-      if (isOpen) onClose();
-    };
-
-    breakpoint.addEventListener("change", closeAcrossBreakpoint);
-    return () =>
-      breakpoint.removeEventListener("change", closeAcrossBreakpoint);
-  }, [isOpen, onClose]);
-
   return (
     <animated.dialog
       ref={dialogRef}

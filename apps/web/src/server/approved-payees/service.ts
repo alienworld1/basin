@@ -1025,6 +1025,42 @@ export function createApprovedPayeeService(
         "Relationship acceptance is temporarily unavailable while Basin's activation service is being configured.",
       );
     }
+    const existingAcceptance = value.operation;
+    if (
+      existingAcceptance?.kind === "ACCEPT" &&
+      existingAcceptance.status === "AWAITING_AUTHORIZATION"
+    ) {
+      if (
+        existingAcceptance.review_expires_at > new Date() &&
+        existingAcceptance.acceptance_payload
+      ) {
+        return {
+          operation: operationDto(existingAcceptance),
+          relationshipId: value.relationship.id.toString(),
+          authorization: {
+            type: "CONTROLLER_SIGNATURE",
+            controller: value.identity.controller_address,
+            domain: {
+              name: "BasinRouter",
+              version: "1",
+              chainId: 11155111,
+              verifyingContract: config.activation.address,
+            },
+            types: acceptanceTypes,
+            primaryType: "AcceptApprovedPayee",
+            message: existingAcceptance.acceptance_payload as Record<
+              string,
+              string | bigint
+            >,
+          },
+        };
+      }
+      await persistence.approvedPayees.updateOperation(existingAcceptance.id, {
+        status: "FAILED",
+        step: "VERIFYING",
+        last_error_code: "REVIEW_EXPIRED",
+      });
+    }
     const observed = await createRelationshipReader(config.ens).observe({
       name: value.relationship.relationship_name,
       identityName: value.identity.ens_name,

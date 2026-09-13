@@ -80,6 +80,7 @@ const payerMask = roleCountMask(payerRoles | (payerRoles << 128n));
 export function createSettlementAdapter(config: EnsDeploymentConfig) {
   const client = createPublicClient({
     chain: sepolia,
+    batch: { multicall: true },
     transport: http(config.rpcUrl, { timeout: 8_000, retryCount: 1 }),
   });
   async function verifyAsset(asset: Address, symbol: string) {
@@ -109,11 +110,14 @@ export function createSettlementAdapter(config: EnsDeploymentConfig) {
     requireSettlement(
       scope.identityName === `${scope.name.split(".")[0]}.basin.eth`,
     );
-    await createEnsAdapter(config).assertInfrastructure();
     const block = await client.getBlock(
       atBlock === undefined ? {} : { blockNumber: atBlock },
     );
     const blockNumber = block.number;
+    // verifyIdentity validates the full pinned ENSv2 infrastructure before
+    // returning. Calling assertInfrastructure here as well duplicated the same
+    // RPC-heavy checks for every relationship read and could leave acceptance
+    // preparation waiting behind an unhealthy provider.
     await createEnsAdapter(config).verifyIdentity(
       scope.identityName,
       scope.controller,

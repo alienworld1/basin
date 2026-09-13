@@ -125,6 +125,7 @@ function permissionProfileHash(values: readonly (string | bigint | boolean)[]) {
 export function createEnsAdapter(config: EnsDeploymentConfig) {
   const publicClient = createPublicClient({
     chain: sepolia,
+    batch: { multicall: true },
     transport: http(config.rpcUrl, { timeout: 8_000, retryCount: 2 }),
   });
   const basinRegistryAddress = getAddress(config.basinRegistryAddress);
