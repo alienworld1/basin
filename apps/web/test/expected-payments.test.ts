@@ -16,7 +16,13 @@ import {
   paymentSubmitInput,
 } from "../src/server/expected-payments/input";
 import { paymentProblemMessage } from "../src/server/payments/preflight";
+import { hasConclusiveNonSubmissionEvidence } from "../src/server/payments/reconciliation";
 import { createPaymentService } from "../src/server/payments/service";
+import {
+  PAYMENT_RECONCILIATION_POLL_WINDOW_MS,
+  shouldContinuePaymentReconciliation,
+  UNKNOWN_PAYMENT_SUBMISSION_GRACE_MS,
+} from "../src/shared/payment-reconciliation";
 
 const key = "91a58b23-33ae-4426-a57e-2c098fe30e91";
 
@@ -187,6 +193,54 @@ test("payment reconciliation leaves terminal failures available for review", asy
   assert.equal(contextRead, false);
   assert.equal(result.operation.status, "FAILED");
   assert.equal(result.operation.problem?.action, "REVIEW_AGAIN");
+});
+
+test("automatic payment reconciliation continues beyond the uncertainty window", () => {
+  const startedAt = 1_000;
+
+  assert.ok(
+    PAYMENT_RECONCILIATION_POLL_WINDOW_MS > UNKNOWN_PAYMENT_SUBMISSION_GRACE_MS,
+  );
+  assert.equal(
+    shouldContinuePaymentReconciliation(
+      startedAt,
+      startedAt + UNKNOWN_PAYMENT_SUBMISSION_GRACE_MS,
+    ),
+    true,
+  );
+  assert.equal(
+    shouldContinuePaymentReconciliation(
+      startedAt,
+      startedAt + PAYMENT_RECONCILIATION_POLL_WINDOW_MS,
+    ),
+    false,
+  );
+});
+
+test("non-submission is conclusive only while payment evidence is absent", () => {
+  const untouchedObligation = {
+    paymentIdConsumed: false,
+    obligationExists: true,
+    obligationCancelled: false,
+    obligationRemainingAmount: 20_000_000n,
+    paymentAmount: 12_000_000n,
+  };
+
+  assert.equal(hasConclusiveNonSubmissionEvidence(untouchedObligation), true);
+  assert.equal(
+    hasConclusiveNonSubmissionEvidence({
+      ...untouchedObligation,
+      paymentIdConsumed: true,
+    }),
+    false,
+  );
+  assert.equal(
+    hasConclusiveNonSubmissionEvidence({
+      ...untouchedObligation,
+      obligationRemainingAmount: 8_000_000n,
+    }),
+    false,
+  );
 });
 
 test("expected-payment lifecycle reserves evidence-backed states", () => {

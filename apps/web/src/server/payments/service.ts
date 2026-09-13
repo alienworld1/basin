@@ -26,6 +26,7 @@ import {
   type PaymentProblemCode,
   type PaymentReviewDto,
 } from "../../shared/payment-types";
+import { UNKNOWN_PAYMENT_SUBMISSION_GRACE_MS } from "../../shared/payment-reconciliation";
 import { getEnsServerEnvironment } from "../config/environment";
 import { verifiedBasinRouter } from "../config/verified-basin-router";
 import { unseal, versionContext } from "../settlement/protection";
@@ -39,6 +40,7 @@ import {
   unsealRoutineKey,
 } from "../treasury/protection";
 import { paymentPreflight, paymentProblemMessage } from "./preflight";
+import { hasConclusiveNonSubmissionEvidence } from "./reconciliation";
 
 type Persistence = ReturnType<typeof createPersistence>;
 type Access = Awaited<
@@ -72,7 +74,6 @@ const transferAbi = [
 const obligationExecutedEvent = parseAbiItem(
   "event ObligationExecuted(bytes32 indexed paymentId, bytes32 indexed obligationId, address indexed organization, bytes32 relationshipNamehash, uint256 relationshipTokenId, bytes32 payeeId, uint256 settlementEpoch, bytes32 settlementCommitment, address destination, uint256 amount, address asset, bytes32 metadataHash, uint256 remainingAmount)",
 );
-const UNKNOWN_SUBMISSION_GRACE_MS = 2 * 60 * 1000;
 const sameAddress = (left: string, right: string) =>
   left.toLowerCase() === right.toLowerCase();
 const problemAction = (code: PaymentProblemCode) =>
@@ -106,7 +107,7 @@ export function paymentExecutionDto(
       ? "PAYMENT_UNCONFIRMED"
       : operation.status === "FAILED"
         ? "PAYMENT_FAILED"
-    : undefined;
+        : undefined;
   const contextualMessage =
     code === "SETTLEMENT_UPDATED" && review
       ? `${review.payeeName} updated where they receive. Review the payment again.`
@@ -664,7 +665,7 @@ export function createPaymentService(persistence: Persistence, access: Access) {
           );
         } else if (
           Date.now() - operation.updated_at.getTime() >=
-          UNKNOWN_SUBMISSION_GRACE_MS
+          UNKNOWN_PAYMENT_SUBMISSION_GRACE_MS
         ) {
           const [router, obligation] = await Promise.all([
             verifiedBasinRouter(),
@@ -690,11 +691,13 @@ export function createPaymentService(persistence: Persistence, access: Access) {
             }),
           ]);
           if (
-            !consumed &&
-            onchainObligation.exists &&
-            !onchainObligation.cancelled &&
-            onchainObligation.remainingAmount >=
-              BigInt(context.payment.amount_base_units)
+            hasConclusiveNonSubmissionEvidence({
+              paymentIdConsumed: consumed,
+              obligationExists: onchainObligation.exists,
+              obligationCancelled: onchainObligation.cancelled,
+              obligationRemainingAmount: onchainObligation.remainingAmount,
+              paymentAmount: BigInt(context.payment.amount_base_units),
+            })
           ) {
             if (context.payment.status === "EXECUTING")
               await persistence.payments.transition(organizationId, {

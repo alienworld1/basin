@@ -9,6 +9,12 @@ import type {
   ExpectedPaymentDetailDto,
   ExpectedPaymentListDto,
 } from "../../shared/expected-payment-types";
+import {
+  PAYMENT_RECONCILIATION_INITIAL_DELAY_MS,
+  PAYMENT_RECONCILIATION_INTERVAL_MS,
+  PAYMENT_RECONCILIATION_RETRY_INTERVAL_MS,
+  shouldContinuePaymentReconciliation,
+} from "../../shared/payment-reconciliation";
 import { authenticatedRequest } from "../auth/authenticated-request";
 import { useBasinAuth } from "../auth/auth-provider";
 import { Button } from "../button";
@@ -468,7 +474,11 @@ export function ExpectedPayments({
       return;
     let active = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let attempts = 0;
+    const startedAt = Date.now();
+    const schedule = (delay: number) => {
+      if (active && shouldContinuePaymentReconciliation(startedAt))
+        timer = setTimeout(poll, delay);
+    };
     const poll = async () => {
       try {
         const result = await request<{
@@ -481,18 +491,16 @@ export function ExpectedPayments({
         if (!active) return;
         await Promise.all([loadDetail(expectedPaymentId), loadList()]);
         if (
-          active &&
-          attempts++ < 23 &&
           ["SUBMITTING", "SUBMITTED", "UNKNOWN_EXTERNAL_STATE"].includes(
             result.operation.status,
           )
         )
-          timer = setTimeout(poll, 5_000);
+          schedule(PAYMENT_RECONCILIATION_INTERVAL_MS);
       } catch {
-        if (active && attempts++ < 23) timer = setTimeout(poll, 10_000);
+        schedule(PAYMENT_RECONCILIATION_RETRY_INTERVAL_MS);
       }
     };
-    timer = setTimeout(poll, 3_000);
+    timer = setTimeout(poll, PAYMENT_RECONCILIATION_INITIAL_DELAY_MS);
     return () => {
       active = false;
       if (timer) clearTimeout(timer);
