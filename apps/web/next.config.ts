@@ -19,6 +19,18 @@ function getWebhookDevOrigin(): string[] {
 const nextConfig: NextConfig = {
   experimental: { useTypeScriptCli: false },
   allowedDevOrigins: getWebhookDevOrigin(),
+  webpack(config) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@farcaster/mini-app-solana$": false,
+    };
+    config.ignoreWarnings ??= [];
+    config.ignoreWarnings.push({
+      module: /[\\/]ox[\\/]_esm[\\/]tempo[\\/]internal[\\/]virtualMasterPool\.js$/,
+      message: /Critical dependency: the request of a dependency is an expression/,
+    });
+    return config;
+  },
   async headers() {
     return [
       {
