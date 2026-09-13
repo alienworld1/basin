@@ -557,7 +557,12 @@ export function createPaymentService(persistence: Persistence, access: Access) {
       organizationId,
       expectedPaymentId,
     );
-    if (operation.status === "CONFIRMED")
+    // Reconciliation is only meaningful while an external submission may
+    // still settle. Failed and blocked operations have no external state to
+    // discover; the operator must start a fresh review instead. In
+    // particular, do not let a failed PAYMENT_ACCESS attempt fall through to
+    // the RPC/Privy recovery paths, which only accept in-flight statuses.
+    if (["BLOCKED", "FAILED", "CONFIRMED"].includes(operation.status))
       return { operation: paymentExecutionDto(operation) };
     const client = createPublicClient({
       chain: sepolia,

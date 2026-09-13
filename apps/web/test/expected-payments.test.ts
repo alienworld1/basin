@@ -16,6 +16,7 @@ import {
   paymentSubmitInput,
 } from "../src/server/expected-payments/input";
 import { paymentProblemMessage } from "../src/server/payments/preflight";
+import { createPaymentService } from "../src/server/payments/service";
 
 const key = "91a58b23-33ae-4426-a57e-2c098fe30e91";
 
@@ -136,6 +137,56 @@ test("payment authority failures preserve the split-authority distinction", () =
     /no longer approved/i,
   );
   assert.match(paymentProblemMessage("PAYMENT_FAILED"), /no funds moved/i);
+});
+
+test("payment reconciliation leaves terminal failures available for review", async () => {
+  let contextRead = false;
+  const operation = {
+    id: 11n,
+    status: "FAILED" as const,
+    validation_step: "PAYMENT_ACCESS" as const,
+    review_snapshot: JSON.stringify({
+      organizationName: "Northstar Labs",
+      payeeName: "Damian Cross",
+      payeeIdentity: "damian.basin.eth",
+      amount: "12",
+      assetSymbol: "USDC",
+      purpose: "Smart contract security review - final milestone",
+      reference: "AUD-042",
+      settlementEpoch: "0",
+      settlementUpdated: false,
+    }),
+    review_expires_at: new Date(),
+    failure_code: "PAYMENT_FAILED",
+  };
+  const persistence = {
+    paymentExecutions: {
+      read: async () => operation,
+      context: async () => {
+        contextRead = true;
+        throw new Error("reconcile should not inspect external state");
+      },
+    },
+  } as never;
+  const service = createPaymentService(persistence, {
+    workspace: {
+      id: 7n,
+      type: "ORGANIZATION",
+      display_name: "Northstar Labs",
+      owner_user_id: 1n,
+      created_at: new Date(),
+      updated_at: new Date(),
+    },
+    organizationId: 8n,
+    memberId: 9n,
+    memberRole: "PAYMENT_OPERATOR",
+  } as never);
+
+  const result = await service.reconcile(11n);
+
+  assert.equal(contextRead, false);
+  assert.equal(result.operation.status, "FAILED");
+  assert.equal(result.operation.problem?.action, "REVIEW_AGAIN");
 });
 
 test("expected-payment lifecycle reserves evidence-backed states", () => {
