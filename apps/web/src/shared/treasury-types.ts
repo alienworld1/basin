@@ -45,6 +45,7 @@ export type TreasuryTechnicalDetails = {
   routerVersion?: string;
   routineLimit?: string;
   lastVerifiedAt?: string;
+  providerDiagnostic?: string;
 };
 
 export type TreasuryStatusResponse = {

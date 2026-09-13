@@ -183,6 +183,9 @@ function response(
       ...(treasury?.last_verified_at
         ? { lastVerifiedAt: treasury.last_verified_at.toISOString() }
         : {}),
+      ...(operation?.safe_error_code?.startsWith("PRIVY_")
+        ? { providerDiagnostic: operation.safe_error_code }
+        : {}),
     },
   };
 }
@@ -422,6 +425,16 @@ export function createTreasuryService(
       });
     }
     const providerKey = operation.idempotency_key;
+    // Privy returns the original response for a repeated key. A known
+    // pre-broadcast funding or broadcast failure needs a newly authorized
+    // allowance attempt; other retries retain their key so they cannot create
+    // a duplicate transaction.
+    const routerAllowanceIdempotencyKey =
+      operation.status === "FAILED_RETRYABLE" &&
+      (context.treasury?.last_error_code === "INSUFFICIENT_FUNDS" ||
+        operation.safe_error_code?.endsWith("TRANSACTION_BROADCAST_FAILURE"))
+        ? `${providerKey}-router-allowance-retry-${operation.updated_at.getTime()}`
+        : `${providerKey}-router-allowance`;
     let treasury = context.treasury;
     await persistence.treasury.saveTreasury({
       organization_id: organizationId,
@@ -637,7 +650,7 @@ export function createTreasuryService(
             functionName: "approve",
             args: [config.router.address, maxUint256],
           }),
-          idempotencyKey: `${providerKey}-router-allowance`,
+          idempotencyKey: routerAllowanceIdempotencyKey,
           authorizationSignature: request.authorizationSignature,
           requestExpiry: request.requestExpiry,
         });
@@ -705,7 +718,10 @@ export function createTreasuryService(
           code === "CONFIGURATION_MISMATCH"
             ? "FAILED_FINAL"
             : "FAILED_RETRYABLE",
-        safe_error_code: code,
+        safe_error_code:
+          error instanceof TreasuryProviderError
+            ? (error.diagnostic ?? code)
+            : code,
       });
     }
     return state();

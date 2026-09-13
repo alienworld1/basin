@@ -17,6 +17,7 @@ export function TreasuryTechnicalDetails({ details }: { details: Details }) {
       {details.routerAddress ? <StatusText label="Basin Router" value={details.routerAddress} technical /> : null}
       {details.routerVersion ? <StatusText label="Router version" value={details.routerVersion} technical /> : null}
       {details.routineLimit ? <StatusText label="Routine limit (base units)" value={details.routineLimit} technical /> : null}
+      {details.providerDiagnostic ? <StatusText label="Provider diagnostic" value={details.providerDiagnostic} technical /> : null}
       <StatusText label="Last verified" value={details.lastVerifiedAt ? new Date(details.lastVerifiedAt).toLocaleString() : "Not yet verified"} />
     </InspectorSection>
   );

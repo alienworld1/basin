@@ -16,6 +16,23 @@ import { TreasuryWalletSummary } from "./treasury-wallet-summary";
 
 const setupKey = (workspaceId: string) => `basin:treasury-setup:${workspaceId}`;
 
+function hasPositiveBalance(value?: string) {
+  try {
+    return value !== undefined && BigInt(value) > 0n;
+  } catch {
+    return false;
+  }
+}
+
+function treasuryRequestErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message === "Wallet proxy not initialized") {
+    return "We couldn't prepare your administrator approval. Refresh the page and sign in again, then try once more.";
+  }
+  return error instanceof Error && error.message
+    ? error.message
+    : "We couldn't finish treasury setup. Your completed steps are saved.";
+}
+
 export function TreasuryControls({
   workspace,
   onTechnicalDetailsChange,
@@ -181,11 +198,7 @@ export function TreasuryControls({
       setReviewOpen(false);
       queueMicrotask(() => headingRef.current?.focus());
     } catch (error) {
-      setRequestError(
-        error instanceof Error && error.message
-          ? error.message
-          : "We couldn't finish treasury setup. Your completed steps are saved.",
-      );
+      setRequestError(treasuryRequestErrorMessage(error));
     } finally {
       setMutating(false);
     }
@@ -193,6 +206,9 @@ export function TreasuryControls({
 
   const status = result?.summary.status;
   const isAdmin = workspace.role === "ADMIN";
+  const hasTreasuryGas = hasPositiveBalance(
+    result?.summary.account?.ethBalanceWei,
+  );
   let title = "Set up treasury controls";
   let helper =
     "Create an organization account for Basin payments. Administrators control settings; payment operators receive limited access.";
@@ -218,8 +234,20 @@ export function TreasuryControls({
     helper =
       "Payments are paused until the organization settings are verified.";
   } else if (status === "FAILED") {
-    title = "We couldn't finish treasury setup";
-    helper = "Your completed steps are saved.";
+    if (result?.summary.errorCode === "INSUFFICIENT_FUNDS") {
+      if (hasTreasuryGas) {
+        title = "Protected payments couldn't be enabled";
+        helper =
+          "Your organization wallet has Sepolia ETH, but we couldn't submit the final approval. Your completed steps are saved. Try again after the treasury connection has been checked.";
+      } else {
+        title = "Add Sepolia ETH to finish setup";
+        helper =
+          "Your organization wallet needs a small amount of Sepolia ETH for the network fee to enable protected payments. Add ETH, then resume setup. Your completed steps are saved.";
+      }
+    } else {
+      title = "We couldn't finish treasury setup";
+      helper = "Your completed steps are saved.";
+    }
   }
 
   return (
@@ -296,7 +324,12 @@ export function TreasuryControls({
             </Button>
           ) : status === "FAILED" ? (
             <Button onClick={() => void mutate("setup")} disabled={mutating}>
-              {mutating ? "Resuming setup…" : "Resume setup"}
+              {mutating
+                ? "Resuming setup…"
+                : result?.summary.errorCode === "INSUFFICIENT_FUNDS" &&
+                    !hasTreasuryGas
+                  ? "Resume after adding ETH"
+                  : "Retry setup"}
             </Button>
           ) : status === "CONTROL_READY" && result?.summary.routerConfigured ? (
             <Button
